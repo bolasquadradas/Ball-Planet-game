@@ -1,0 +1,2824 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ball Planet - Jogo de Formas Geométricas</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Press+Start+2P:wght@400&display=swap');
+        
+        body {
+            font-family: 'Press Start 2P', cursive;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            user-select: none;
+            -webkit-user-select: none;
+            -webkit-touch-callout: none;
+            overflow-x: hidden;
+        }
+        
+        .pixel-font {
+            font-family: 'Press Start 2P', cursive;
+        }
+        
+        .game-button {
+            transition: all 0.2s ease;
+            image-rendering: pixelated;
+        }
+        
+        .game-button:hover {
+            transform: scale(1.05);
+        }
+        
+        .game-button:active {
+            transform: scale(0.95);
+        }
+        
+        #gameCanvas {
+            border: 3px solid #333;
+            background: linear-gradient(180deg, #87CEEB 0%, #98FB98 100%);
+            max-width: 100vw;
+            max-height: 70vh;
+            width: auto;
+            height: auto;
+        }
+        
+        .mobile-control {
+            background: rgba(0, 0, 0, 0.7);
+            border: 2px solid rgba(255, 255, 255, 0.8);
+            color: white;
+            user-select: none;
+            -webkit-user-select: none;
+            touch-action: manipulation;
+        }
+        
+        .mobile-control:active {
+            background: rgba(255, 255, 255, 0.3);
+        }
+
+        .shield-button {
+            background: rgba(0, 100, 255, 0.7);
+            border: 2px solid rgba(255, 255, 255, 0.8);
+        }
+
+        .laser-button {
+            background: rgba(255, 100, 0, 0.7);
+            border: 2px solid rgba(255, 255, 255, 0.8);
+        }
+
+        .sword-button {
+            background: rgba(255, 0, 100, 0.7);
+            border: 2px solid rgba(255, 255, 255, 0.8);
+        }
+
+        .boss-health-bar {
+            position: fixed;
+            top: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(0, 0, 0, 0.8);
+            padding: 10px;
+            border-radius: 10px;
+            border: 2px solid #fff;
+            z-index: 10;
+        }
+
+        .game-container {
+            height: 100vh;
+            width: 100vw;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            background: #000;
+        }
+
+        #mobileControls {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background: rgba(0, 0, 0, 0.9);
+            padding: 10px;
+            z-index: 20;
+        }
+
+        .warning-text {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(255, 0, 0, 0.9);
+            color: white;
+            padding: 20px;
+            border-radius: 10px;
+            border: 3px solid #fff;
+            z-index: 30;
+            animation: pulse 0.5s infinite;
+        }
+
+        @keyframes pulse {
+            0% { transform: translate(-50%, -50%) scale(1); }
+            50% { transform: translate(-50%, -50%) scale(1.1); }
+            100% { transform: translate(-50%, -50%) scale(1); }
+        }
+
+        @media (max-width: 768px) {
+            #gameCanvas {
+                max-height: 60vh;
+            }
+            
+            #mobileControls {
+                padding: 8px;
+            }
+        }
+    </style>
+</head>
+<body class="overflow-hidden">
+    <!-- Main Menu -->
+    <div id="mainMenu" class="min-h-screen flex flex-col justify-center items-center bg-gradient-to-br from-purple-600 to-blue-600">
+        <h1 class="text-4xl md:text-6xl text-white mb-8 pixel-font text-center">BALL PLANET</h1>
+        <div class="space-y-4">
+            <button id="playButton" class="game-button bg-green-500 hover:bg-green-600 text-white px-8 py-4 rounded-lg text-lg pixel-font">
+                JOGAR
+            </button>
+            <button id="shopButton" class="game-button bg-yellow-500 hover:bg-yellow-600 text-white px-8 py-4 rounded-lg text-lg pixel-font">
+                LOJA
+            </button>
+            <button id="achievementsButton" class="game-button bg-purple-500 hover:bg-purple-600 text-white px-8 py-4 rounded-lg text-lg pixel-font">
+                CONQUISTAS
+            </button>
+        </div>
+        <div class="mt-8 text-white pixel-font text-sm">
+            Dinheiro: <span id="moneyDisplay">0</span> 💰
+        </div>
+    </div>
+
+    <!-- Shop Screen -->
+    <div id="shopScreen" class="min-h-screen p-4 bg-gradient-to-br from-yellow-600 to-orange-600 hidden">
+        <div class="max-w-4xl mx-auto">
+            <div class="flex justify-between items-center mb-8">
+                <button id="backToMenuFromShop" class="game-button bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded pixel-font text-sm">
+                    VOLTAR
+                </button>
+                <h2 class="text-2xl md:text-4xl text-white pixel-font">LOJA</h2>
+                <div class="text-white pixel-font text-sm">
+                    💰 <span id="shopMoneyDisplay">0</span>
+                </div>
+            </div>
+            
+            <!-- Shopkeeper -->
+            <div class="bg-white/20 p-6 rounded-lg border-2 border-white/30 mb-8">
+                <div class="flex items-center justify-center mb-4">
+                    <canvas id="shopkeeperCanvas" width="120" height="120" class="border-2 border-white rounded"></canvas>
+                </div>
+                <div id="shopkeeperText" class="text-white pixel-font text-sm text-center">
+                    "Opa cidadão, precisa de algo?"
+                </div>
+            </div>
+
+            <!-- Shop Items -->
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                <!-- Shield Item -->
+                <div class="bg-white/20 p-6 rounded-lg border-2 border-white/30">
+                    <h3 class="text-white pixel-font text-lg mb-2">🛡️ ESCUDO PROTETOR</h3>
+                    <p class="text-white pixel-font text-xs mb-4">Fica imortal por 5 segundos. Cooldown: 25s</p>
+                    <p class="text-yellow-300 pixel-font text-sm mb-4">💰 200 moedas</p>
+                    <button id="buyShield" class="game-button bg-blue-500 hover:bg-blue-600 text-white px-6 py-3 rounded pixel-font text-sm w-full">
+                        COMPRAR
+                    </button>
+                    <div id="shieldOwned" class="text-green-400 pixel-font text-xs mt-2 hidden">✅ COMPRADO</div>
+                </div>
+
+                <!-- Laser Item -->
+                <div class="bg-white/20 p-6 rounded-lg border-2 border-white/30">
+                    <h3 class="text-white pixel-font text-lg mb-2">⚡ TIRO ESPECIAL</h3>
+                    <p class="text-white pixel-font text-xs mb-4">Laser azul devastador. Requer 30+ dano causado</p>
+                    <p class="text-yellow-300 pixel-font text-sm mb-4">💰 1000 moedas</p>
+                    <button id="buyLaser" class="game-button bg-orange-500 hover:bg-orange-600 text-white px-6 py-3 rounded pixel-font text-sm w-full">
+                        COMPRAR
+                    </button>
+                    <div id="laserOwned" class="text-green-400 pixel-font text-xs mt-2 hidden">✅ COMPRADO</div>
+                </div>
+
+                <!-- Extra Life Item -->
+                <div class="bg-white/20 p-6 rounded-lg border-2 border-white/30">
+                    <h3 class="text-white pixel-font text-lg mb-2">❤️ VIDA EXTRA!</h3>
+                    <p class="text-white pixel-font text-xs mb-4">Aumenta sua vida máxima em 50 HP</p>
+                    <p class="text-yellow-300 pixel-font text-sm mb-4">💰 500 moedas</p>
+                    <button id="buyExtraLife" class="game-button bg-red-500 hover:bg-red-600 text-white px-6 py-3 rounded pixel-font text-sm w-full">
+                        COMPRAR
+                    </button>
+                    <div id="extraLifeOwned" class="text-green-400 pixel-font text-xs mt-2 hidden">✅ COMPRADO</div>
+                </div>
+
+                <!-- Sword Rain Item -->
+                <div class="bg-white/20 p-6 rounded-lg border-2 border-white/30">
+                    <h3 class="text-white pixel-font text-lg mb-2">⚔️ CHUVA DE ESPADAS</h3>
+                    <p class="text-white pixel-font text-xs mb-4">15 espadas surgem de portais! 1x por fase</p>
+                    <p class="text-yellow-300 pixel-font text-sm mb-4">💰 2500 moedas</p>
+                    <button id="buySwordRain" class="game-button bg-purple-500 hover:bg-purple-600 text-white px-6 py-3 rounded pixel-font text-sm w-full">
+                        COMPRAR
+                    </button>
+                    <div id="swordRainOwned" class="text-green-400 pixel-font text-xs mt-2 hidden">✅ COMPRADO</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Achievements Screen -->
+    <div id="achievementsScreen" class="min-h-screen p-4 bg-gradient-to-br from-purple-600 to-indigo-700 hidden">
+        <div class="max-w-4xl mx-auto">
+            <div class="flex justify-between items-center mb-8">
+                <button id="backToMenuFromAchievements" class="game-button bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded pixel-font text-sm">
+                    VOLTAR
+                </button>
+                <h2 class="text-2xl md:text-4xl text-white pixel-font">CONQUISTAS</h2>
+                <div class="text-white pixel-font text-sm">
+                    <span id="achievementsProgress">0/8</span> Descobertas
+                </div>
+            </div>
+            
+            <!-- Achievements Grid -->
+            <div id="achievementsGrid" class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <!-- Achievements will be dynamically populated -->
+            </div>
+        </div>
+    </div>
+
+    <!-- Level Selection -->
+    <div id="levelSelect" class="min-h-screen p-4 bg-gradient-to-br from-indigo-600 to-purple-600 hidden">
+        <div class="max-w-4xl mx-auto">
+            <div class="flex justify-between items-center mb-8">
+                <button id="backToMenu" class="game-button bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded pixel-font text-sm">
+                    VOLTAR
+                </button>
+                <h2 class="text-2xl md:text-4xl text-white pixel-font">MUNDO 1 - PLANETA BOLA</h2>
+                <div class="text-white pixel-font text-sm">
+                    💰 <span id="moneyDisplay2">0</span>
+                </div>
+            </div>
+            
+            <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+                <div class="level-item bg-white/20 p-4 rounded-lg border-2 border-white/30">
+                    <div class="text-center">
+                        <div class="text-2xl mb-2">🌍</div>
+                        <div class="text-white pixel-font text-xs mb-2">FASE 1</div>
+                        <button id="level1Button" class="game-button bg-blue-500 hover:bg-blue-600 text-white px-3 py-2 rounded pixel-font text-xs">
+                            SELECIONAR
+                        </button>
+                    </div>
+                </div>
+                
+                <div id="level2Container" class="level-item bg-gray-600/50 p-4 rounded-lg border-2 border-gray-400/30">
+                    <div class="text-center">
+                        <div class="text-2xl mb-2">🔒</div>
+                        <div class="text-gray-300 pixel-font text-xs mb-2">FASE 2</div>
+                        <div class="text-gray-400 pixel-font text-xs">BLOQUEADA</div>
+                    </div>
+                </div>
+                
+                <div id="level3Container" class="level-item bg-gray-600/50 p-4 rounded-lg border-2 border-gray-400/30">
+                    <div class="text-center">
+                        <div class="text-2xl mb-2">🔒</div>
+                        <div class="text-gray-300 pixel-font text-xs mb-2">FASE 3</div>
+                        <div class="text-gray-400 pixel-font text-xs">BLOQUEADA</div>
+                    </div>
+                </div>
+                
+                <div id="level4Container" class="level-item bg-gray-600/50 p-4 rounded-lg border-2 border-gray-400/30">
+                    <div class="text-center">
+                        <div class="text-2xl mb-2">🔒</div>
+                        <div class="text-gray-300 pixel-font text-xs mb-2">FASE 4</div>
+                        <div class="text-gray-400 pixel-font text-xs">BLOQUEADA</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- World 2 Button -->
+            <div id="world2Button" class="mt-8 text-center hidden">
+                <button id="goToWorld2" class="game-button bg-purple-700 hover:bg-purple-800 text-white px-8 py-4 rounded-lg pixel-font text-lg">
+                    🚀 MUNDO 2 - PLANETA QUADRADO
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- World 2 Level Selection -->
+    <div id="world2Select" class="min-h-screen p-4 bg-gradient-to-br from-green-600 to-teal-600 hidden">
+        <div class="max-w-4xl mx-auto">
+            <div class="flex justify-between items-center mb-8">
+                <button id="backToWorld1" class="game-button bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded pixel-font text-sm">
+                    VOLTAR
+                </button>
+                <h2 class="text-2xl md:text-4xl text-white pixel-font">MUNDO 2 - PLANETA QUADRADO</h2>
+                <div class="text-white pixel-font text-sm">
+                    💰 <span id="moneyDisplay3">0</span>
+                </div>
+            </div>
+            
+            <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+                <div class="level-item bg-gray-600/50 p-4 rounded-lg border-2 border-gray-400/30">
+                    <div class="text-center">
+                        <div class="text-2xl mb-2">🔒</div>
+                        <div class="text-gray-300 pixel-font text-xs mb-2">FASE 5</div>
+                        <div class="text-gray-400 pixel-font text-xs">EM BREVE</div>
+                    </div>
+                </div>
+                
+                <div class="level-item bg-gray-600/50 p-4 rounded-lg border-2 border-gray-400/30">
+                    <div class="text-center">
+                        <div class="text-2xl mb-2">🔒</div>
+                        <div class="text-gray-300 pixel-font text-xs mb-2">FASE 6</div>
+                        <div class="text-gray-400 pixel-font text-xs">EM BREVE</div>
+                    </div>
+                </div>
+                
+                <div class="level-item bg-gray-600/50 p-4 rounded-lg border-2 border-gray-400/30">
+                    <div class="text-center">
+                        <div class="text-2xl mb-2">🔒</div>
+                        <div class="text-gray-300 pixel-font text-xs mb-2">FASE 7</div>
+                        <div class="text-gray-400 pixel-font text-xs">EM BREVE</div>
+                    </div>
+                </div>
+                
+                <div class="level-item bg-gray-600/50 p-4 rounded-lg border-2 border-gray-400/30">
+                    <div class="text-center">
+                        <div class="text-2xl mb-2">🔒</div>
+                        <div class="text-gray-300 pixel-font text-xs mb-2">FASE 8</div>
+                        <div class="text-gray-400 pixel-font text-xs">EM BREVE</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Level Description -->
+    <div id="levelDescription" class="min-h-screen flex flex-col justify-center items-center bg-gradient-to-br from-blue-700 to-indigo-800 hidden">
+        <div class="bg-white/10 p-8 rounded-lg border-2 border-white/30 max-w-2xl">
+            <h3 id="levelTitle" class="text-2xl text-white pixel-font mb-4 text-center">FASE 1</h3>
+            <p id="levelDesc" class="text-white pixel-font text-sm mb-6 text-center leading-relaxed">
+                Em um lugar onde só existem bolas, algo triangular aparece...
+            </p>
+            <div class="flex justify-center space-x-4">
+                <button id="backToLevels" class="game-button bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded pixel-font text-sm">
+                    VOLTAR
+                </button>
+                <button id="enterLevel" class="game-button bg-green-500 hover:bg-green-600 text-white px-6 py-2 rounded pixel-font text-sm">
+                    ENTRAR
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Game Screen -->
+    <div id="gameScreen" class="hidden">
+        <div class="game-container">
+            <canvas id="gameCanvas" width="800" height="600"></canvas>
+        </div>
+        
+        <!-- Boss Health Bar -->
+        <div id="bossHealthBar" class="boss-health-bar hidden">
+            <div class="text-white pixel-font text-xs mb-2 text-center" id="bossName">BOLA DONA</div>
+            <div class="w-64 h-4 bg-red-800 border-2 border-white rounded">
+                <div id="bossHealth" class="h-full bg-red-500 rounded transition-all duration-300" style="width: 100%"></div>
+            </div>
+        </div>
+
+        <!-- Boss Warning -->
+        <div id="bossWarning" class="warning-text hidden">
+            <div class="text-white pixel-font text-lg">⚠️ CUIDADO! ⚠️</div>
+        </div>
+        
+        <!-- Mobile Controls -->
+        <div id="mobileControls" class="md:hidden">
+            <div class="flex justify-between items-center">
+                <!-- Movement Controls -->
+                <div class="flex space-x-2">
+                    <button id="leftBtn" class="mobile-control w-16 h-16 rounded-full flex items-center justify-center pixel-font text-xl">←</button>
+                    <button id="rightBtn" class="mobile-control w-16 h-16 rounded-full flex items-center justify-center pixel-font text-xl">→</button>
+                </div>
+                
+                <!-- Aim and Shoot Controls -->
+                <div class="flex flex-col items-center space-y-2">
+                    <!-- Aim Controls -->
+                    <div class="grid grid-cols-3 gap-1">
+                        <button id="aimUpLeft" class="mobile-control w-12 h-12 rounded flex items-center justify-center text-xs">↖</button>
+                        <button id="aimUp" class="mobile-control w-12 h-12 rounded flex items-center justify-center text-xs">↑</button>
+                        <button id="aimUpRight" class="mobile-control w-12 h-12 rounded flex items-center justify-center text-xs">↗</button>
+                        <button id="aimLeft" class="mobile-control w-12 h-12 rounded flex items-center justify-center text-xs">←</button>
+                        <div class="w-12 h-12"></div>
+                        <button id="aimRight" class="mobile-control w-12 h-12 rounded flex items-center justify-center text-xs">→</button>
+                    </div>
+                    <!-- Shoot Button -->
+                    <button id="shoot" class="mobile-control w-16 h-16 rounded-full flex items-center justify-center text-lg bg-red-600">🔫</button>
+                </div>
+
+                <!-- Special Abilities -->
+                <div class="flex flex-col space-y-2">
+                    <button id="shieldBtn" class="shield-button w-16 h-16 rounded-full flex items-center justify-center pixel-font text-sm hidden">🛡️</button>
+                    <button id="laserBtn" class="laser-button w-16 h-16 rounded-full flex items-center justify-center pixel-font text-sm hidden">⚡</button>
+                    <button id="swordBtn" class="sword-button w-16 h-16 rounded-full flex items-center justify-center pixel-font text-sm hidden">⚔️</button>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Game UI -->
+        <div class="fixed top-4 left-4 text-white pixel-font text-sm z-10">
+            <div>HP: <span id="playerHP">100</span>/<span id="playerMaxHP">100</span></div>
+            <div>Dinheiro: <span id="gameMoneyDisplay">0</span> 💰</div>
+            <div id="gameTimeContainer">Tempo: <span id="gameTime">30</span>s</div>
+            <div>Dano Total: <span id="gameDamageDisplay">0</span></div>
+            <div id="swordUsesContainer" class="hidden">Espadas: <span id="swordUses">1</span>/1</div>
+        </div>
+        
+        <div class="fixed top-4 right-4 z-10">
+            <button id="pauseBtn" class="mobile-control px-4 py-2 rounded pixel-font text-sm">PAUSE</button>
+        </div>
+    </div>
+
+    <!-- Achievement Notification -->
+    <div id="achievementNotification" class="fixed top-4 right-4 bg-black/90 p-4 rounded-lg border-2 border-yellow-400 hidden z-50 max-w-xs">
+        <div class="text-center">
+            <div class="text-yellow-400 pixel-font text-sm mb-1">NOVA DESCOBERTA!</div>
+            <div id="achievementIcon" class="text-2xl mb-1">🔵</div>
+            <div id="achievementName" class="text-white pixel-font text-xs mb-1">Inimigo Azul</div>
+            <div id="achievementDesc" class="text-gray-300 pixel-font text-xs">Pequeno quadrado azul que persegue o jogador.</div>
+        </div>
+    </div>
+
+    <!-- Cutscene Overlay -->
+    <div id="cutsceneOverlay" class="fixed inset-0 bg-black/80 flex items-center justify-center hidden z-50">
+        <div class="bg-black/90 p-6 rounded-lg border-2 border-white/30 max-w-2xl">
+            <div id="cutsceneContent" class="text-white pixel-font text-sm text-center"></div>
+            <button id="skipCutscene" class="mt-4 game-button bg-gray-600 hover:bg-gray-700 text-white px-4 py-2 rounded pixel-font text-xs mx-auto block">
+                PULAR
+            </button>
+        </div>
+    </div>
+
+    <!-- Pause Menu -->
+    <div id="pauseMenu" class="fixed inset-0 bg-black/80 flex items-center justify-center hidden z-40">
+        <div class="bg-white/10 p-8 rounded-lg border-2 border-white/30">
+            <h3 class="text-2xl text-white pixel-font mb-4 text-center">PAUSADO</h3>
+            <div class="space-y-3">
+                <button id="resumeBtn" class="game-button bg-green-500 hover:bg-green-600 text-white px-6 py-2 rounded pixel-font text-sm w-full">
+                    CONTINUAR
+                </button>
+                <button id="quitBtn" class="game-button bg-red-500 hover:bg-red-600 text-white px-6 py-2 rounded pixel-font text-sm w-full">
+                    SAIR
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Hide console
+        if (typeof console !== 'undefined') {
+            console.log = console.warn = console.error = () => {};
+        }
+
+        // Achievements system
+        let achievements = {
+            small_enemy: {
+                name: "Inimigo Azul",
+                icon: "🔵",
+                description: "Pequeno quadrado azul que persegue o jogador. Fraco mas perigoso em grupo.",
+                discovered: false
+            },
+            big_enemy: {
+                name: "Inimigo Grande",
+                icon: "🟦",
+                description: "Quadrado azul maior que atira projéteis vermelhos no jogador. Fica parado mas é perigoso à distância.",
+                discovered: false
+            },
+            rolling_enemy: {
+                name: "Bola Verde Rolante",
+                icon: "🟢",
+                description: "Bola verde que rola pelo chão causando muito dano. Move-se em linha reta e é difícil de evitar.",
+                discovered: false
+            },
+            rectangle_enemy: {
+                name: "Retângulo Venenoso",
+                icon: "🟩",
+                description: "Inimigo retangular verde que atira projéteis venenosos roxos. Vem do planeta quadrado.",
+                discovered: false
+            },
+            boss_enemy: {
+                name: "Bola Dona",
+                icon: "🔴",
+                description: "Chefe das bolas do planeta. Pode lançar bombas, bater no chão e invocar servos. Fica mais forte quando ferida.",
+                discovered: false
+            },
+            minion_enemy: {
+                name: "Servo da Bola Dona",
+                icon: "🟠",
+                description: "Pequenas bolas laranja invocadas pela Bola Dona. Perseguem o jogador e causam dano moderado.",
+                discovered: false
+            },
+            bomb: {
+                name: "Bomba",
+                icon: "💣",
+                description: "Projétil explosivo laranja lançado pela Bola Dona. Pode ser destruída com tiros antes de explodir.",
+                discovered: false
+            },
+            poison_bullet: {
+                name: "Projétil Venenoso",
+                icon: "🟣",
+                description: "Bala roxa venenosa disparada por retângulos. Causa mais dano que projéteis normais.",
+                discovered: false
+            }
+        };
+
+        function discoverAchievement(type) {
+            if (!achievements[type] || achievements[type].discovered) return;
+            
+            achievements[type].discovered = true;
+            showAchievementNotification(achievements[type]);
+            updateAchievementsScreen();
+        }
+
+        function showAchievementNotification(achievement) {
+            document.getElementById('achievementIcon').textContent = achievement.icon;
+            document.getElementById('achievementName').textContent = achievement.name;
+            document.getElementById('achievementDesc').textContent = achievement.description;
+            document.getElementById('achievementNotification').classList.remove('hidden');
+            
+            setTimeout(() => {
+                document.getElementById('achievementNotification').classList.add('hidden');
+            }, 4000);
+        }
+
+        function updateAchievementsScreen() {
+            const grid = document.getElementById('achievementsGrid');
+            const discovered = Object.values(achievements).filter(a => a.discovered).length;
+            const total = Object.keys(achievements).length;
+            
+            document.getElementById('achievementsProgress').textContent = `${discovered}/${total}`;
+            
+            grid.innerHTML = '';
+            
+            Object.entries(achievements).forEach(([key, achievement]) => {
+                const achievementDiv = document.createElement('div');
+                achievementDiv.className = achievement.discovered 
+                    ? 'bg-white/20 p-4 rounded-lg border-2 border-white/30'
+                    : 'bg-gray-600/50 p-4 rounded-lg border-2 border-gray-400/30';
+                
+                achievementDiv.innerHTML = `
+                    <div class="text-center">
+                        <div class="text-4xl mb-2">${achievement.discovered ? achievement.icon : '❓'}</div>
+                        <div class="text-white pixel-font text-sm mb-2">${achievement.discovered ? achievement.name : '???'}</div>
+                        <div class="text-gray-300 pixel-font text-xs">${achievement.discovered ? achievement.description : 'Derrote este inimigo para descobrir'}</div>
+                    </div>
+                `;
+                
+                grid.appendChild(achievementDiv);
+            });
+        }
+
+        // Game State
+        let gameState = {
+            screen: 'menu',
+            money: 5000, // Dinheiro suficiente para comprar tudo
+            currentLevel: 1,
+            gameRunning: false,
+            paused: false,
+            cutsceneActive: false,
+            level1Completed: false,
+            level2Completed: false,
+            level3Completed: false,
+            level4Completed: false,
+            level2Unlocked: false,
+            level3Unlocked: false,
+            level4Unlocked: false,
+            world2Unlocked: false,
+            totalDamageDealt: 0,
+            
+            // Shop items
+            hasShield: false,
+            hasLaser: false,
+            hasExtraLife: false,
+            hasSwordRain: false,
+            
+            // Abilities state
+            shieldActive: false,
+            shieldCooldown: 0,
+            shieldDuration: 0,
+            swordRainUsesLeft: 0
+        };
+
+        // Game Objects
+        let player = {
+            x: 400,
+            y: 500,
+            width: 30,
+            height: 30,
+            hp: 100,
+            maxHP: 100,
+            speed: 5,
+            aimDirection: { x: 0, y: -1 }
+        };
+
+        let bullets = [];
+        let enemies = [];
+        let lasers = [];
+        let bombs = [];
+        let boss = null;
+        let gameTime = 30;
+        let lastEnemySpawn = 0;
+        let lastBigEnemySpawn = 0;
+        let lastRollingEnemySpawn = 0;
+        let floatingTexts = [];
+        let enemySpawnPaused = false;
+        let swords = [];
+        let fingerSnapEffect = null;
+        let portals = [];
+
+        // Canvas setup
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+
+        // Input handling
+        let keys = {};
+        let mobileControls = {
+            left: false,
+            right: false,
+            shoot: false,
+            aimDirection: { x: 0, y: -1 }
+        };
+
+        // Event Listeners
+        document.addEventListener('keydown', (e) => {
+            keys[e.key] = true;
+        });
+
+        document.addEventListener('keyup', (e) => {
+            keys[e.key] = false;
+        });
+
+        // Clear keys when window loses focus to prevent stuck keys
+        window.addEventListener('blur', () => {
+            keys = {};
+            mobileControls = {
+                left: false,
+                right: false,
+                shoot: false,
+                aimDirection: { x: 0, y: -1 }
+            };
+        });
+
+        // Setup shopkeeper canvas
+        function drawShopkeeper() {
+            const shopCanvas = document.getElementById('shopkeeperCanvas');
+            const shopCtx = shopCanvas.getContext('2d');
+            
+            // Clear
+            shopCtx.fillStyle = '#FFD700';
+            shopCtx.fillRect(0, 0, 120, 120);
+            
+            // Shopkeeper (ball with hat)
+            shopCtx.fillStyle = '#32CD32';
+            shopCtx.beginPath();
+            shopCtx.arc(60, 70, 25, 0, Math.PI * 2);
+            shopCtx.fill();
+            
+            // Eyes
+            shopCtx.fillStyle = '#000000';
+            shopCtx.fillRect(50, 60, 6, 6);
+            shopCtx.fillRect(64, 60, 6, 6);
+            
+            // Hat
+            shopCtx.fillStyle = '#8B4513';
+            shopCtx.fillRect(45, 35, 30, 20);
+            shopCtx.fillRect(40, 50, 40, 5);
+        }
+
+        // Mobile controls setup
+        function setupMobileControls() {
+            // Game controls
+            const gameControls = [
+                { id: 'leftBtn', action: 'left' },
+                { id: 'rightBtn', action: 'right' }
+            ];
+            
+            gameControls.forEach(control => {
+                const element = document.getElementById(control.id);
+                element.addEventListener('touchstart', (e) => {
+                    e.preventDefault();
+                    mobileControls[control.action] = true;
+                });
+                element.addEventListener('touchend', (e) => {
+                    e.preventDefault();
+                    mobileControls[control.action] = false;
+                });
+                element.addEventListener('touchcancel', (e) => {
+                    e.preventDefault();
+                    mobileControls[control.action] = false;
+                });
+            });
+
+            // Aim controls
+            const aimControls = {
+                aimUpLeft: { x: -1, y: -1 },
+                aimUp: { x: 0, y: -1 },
+                aimUpRight: { x: 1, y: -1 },
+                aimLeft: { x: -1, y: 0 },
+                aimRight: { x: 1, y: 0 }
+            };
+
+            Object.keys(aimControls).forEach(id => {
+                document.getElementById(id).addEventListener('click', () => {
+                    mobileControls.aimDirection = aimControls[id];
+                    player.aimDirection = aimControls[id];
+                });
+            });
+
+            // Shoot buttons
+            document.getElementById('shoot').addEventListener('click', () => shoot());
+            
+            // Special ability buttons
+            document.getElementById('shieldBtn').addEventListener('click', () => useShield());
+            document.getElementById('laserBtn').addEventListener('click', () => useLaser());
+            document.getElementById('swordBtn').addEventListener('click', () => useSwordRain());
+        }
+
+        // Menu navigation
+        document.getElementById('playButton').addEventListener('click', () => {
+            showScreen('levelSelect');
+        });
+
+        document.getElementById('shopButton').addEventListener('click', () => {
+            showScreen('shop');
+        });
+
+        document.getElementById('achievementsButton').addEventListener('click', () => {
+            showScreen('achievements');
+        });
+
+        document.getElementById('backToMenu').addEventListener('click', () => {
+            showScreen('menu');
+        });
+
+        document.getElementById('backToMenuFromShop').addEventListener('click', () => {
+            showScreen('menu');
+        });
+
+        document.getElementById('backToMenuFromAchievements').addEventListener('click', () => {
+            showScreen('menu');
+        });
+
+        document.getElementById('goToWorld2').addEventListener('click', () => {
+            showScreen('world2Select');
+        });
+
+        document.getElementById('backToWorld1').addEventListener('click', () => {
+            showScreen('levelSelect');
+        });
+
+        document.getElementById('level1Button').addEventListener('click', () => {
+            gameState.currentLevel = 1;
+            document.getElementById('levelTitle').textContent = 'FASE 1';
+            document.getElementById('levelDesc').textContent = 'Em um lugar onde só existem bolas, algo triangular aparece...';
+            showScreen('levelDescription');
+        });
+
+        document.getElementById('backToLevels').addEventListener('click', () => {
+            showScreen('levelSelect');
+        });
+
+        document.getElementById('enterLevel').addEventListener('click', () => {
+            if (gameState.currentLevel === 1) {
+                startLevel1();
+            } else if (gameState.currentLevel === 2) {
+                startLevel2();
+            } else if (gameState.currentLevel === 3) {
+                startLevel3();
+            } else if (gameState.currentLevel === 4) {
+                startLevel4();
+            }
+        });
+
+        document.getElementById('pauseBtn').addEventListener('click', () => {
+            togglePause();
+        });
+
+        document.getElementById('resumeBtn').addEventListener('click', () => {
+            togglePause();
+        });
+
+        document.getElementById('quitBtn').addEventListener('click', () => {
+            quitGame();
+        });
+
+        document.getElementById('skipCutscene').addEventListener('click', () => {
+            skipCutscene();
+        });
+
+        // Shop buttons
+        document.getElementById('buyShield').addEventListener('click', () => {
+            if (gameState.money >= 200 && !gameState.hasShield) {
+                gameState.money -= 200;
+                gameState.hasShield = true;
+                updateMoneyDisplay();
+                updateShopDisplay();
+                document.getElementById('shopkeeperText').textContent = '"Excelente escolha! Você estará protegido!"';
+            } else if (gameState.hasShield) {
+                document.getElementById('shopkeeperText').textContent = '"Você já tem isso!"';
+            } else {
+                document.getElementById('shopkeeperText').textContent = '"Você não tem dinheiro suficiente!"';
+            }
+        });
+
+        document.getElementById('buyLaser').addEventListener('click', () => {
+            if (gameState.money >= 1000 && !gameState.hasLaser) {
+                gameState.money -= 1000;
+                gameState.hasLaser = true;
+                updateMoneyDisplay();
+                updateShopDisplay();
+                document.getElementById('shopkeeperText').textContent = '"Poder devastador! Use com sabedoria!"';
+            } else if (gameState.hasLaser) {
+                document.getElementById('shopkeeperText').textContent = '"Você já tem isso!"';
+            } else {
+                document.getElementById('shopkeeperText').textContent = '"Você não tem dinheiro suficiente!"';
+            }
+        });
+
+        document.getElementById('buyExtraLife').addEventListener('click', () => {
+            if (gameState.money >= 500 && !gameState.hasExtraLife) {
+                gameState.money -= 500;
+                gameState.hasExtraLife = true;
+                player.maxHP = 150;
+                player.hp = Math.min(player.hp + 50, 150);
+                updateMoneyDisplay();
+                updateShopDisplay();
+                document.getElementById('playerHP').textContent = player.hp;
+                document.getElementById('playerMaxHP').textContent = player.maxHP;
+                document.getElementById('shopkeeperText').textContent = '"Agora você está mais resistente!"';
+            } else if (gameState.hasExtraLife) {
+                document.getElementById('shopkeeperText').textContent = '"Você já tem isso!"';
+            } else {
+                document.getElementById('shopkeeperText').textContent = '"Você não tem dinheiro suficiente!"';
+            }
+        });
+
+        document.getElementById('buySwordRain').addEventListener('click', () => {
+            if (gameState.money >= 2500 && !gameState.hasSwordRain) {
+                gameState.money -= 2500;
+                gameState.hasSwordRain = true;
+                updateMoneyDisplay();
+                updateShopDisplay();
+                document.getElementById('shopkeeperText').textContent = '"Poder devastador dos portais! Use uma vez por fase!"';
+            } else if (gameState.hasSwordRain) {
+                document.getElementById('shopkeeperText').textContent = '"Você já tem isso!"';
+            } else {
+                document.getElementById('shopkeeperText').textContent = '"Você não tem dinheiro suficiente!"';
+            }
+        });
+
+        // Screen management
+        function showScreen(screen) {
+            document.getElementById('mainMenu').classList.add('hidden');
+            document.getElementById('levelSelect').classList.add('hidden');
+            document.getElementById('world2Select').classList.add('hidden');
+            document.getElementById('levelDescription').classList.add('hidden');
+            document.getElementById('gameScreen').classList.add('hidden');
+            document.getElementById('shopScreen').classList.add('hidden');
+            document.getElementById('achievementsScreen').classList.add('hidden');
+
+            switch(screen) {
+                case 'menu':
+                    document.getElementById('mainMenu').classList.remove('hidden');
+                    break;
+                case 'levelSelect':
+                    document.getElementById('levelSelect').classList.remove('hidden');
+                    updateLevelSelect();
+                    break;
+                case 'world2Select':
+                    document.getElementById('world2Select').classList.remove('hidden');
+                    break;
+                case 'levelDescription':
+                    document.getElementById('levelDescription').classList.remove('hidden');
+                    break;
+                case 'game':
+                    document.getElementById('gameScreen').classList.remove('hidden');
+                    updateAbilityButtons();
+                    break;
+                case 'shop':
+                    document.getElementById('shopScreen').classList.remove('hidden');
+                    drawShopkeeper();
+                    updateShopDisplay();
+                    break;
+                case 'achievements':
+                    document.getElementById('achievementsScreen').classList.remove('hidden');
+                    updateAchievementsScreen();
+                    break;
+            }
+            
+            gameState.screen = screen;
+            updateMoneyDisplay();
+        }
+
+        function updateLevelSelect() {
+            if (gameState.level1Completed && !gameState.level2Unlocked) {
+                gameState.level2Unlocked = true;
+                const level2Container = document.getElementById('level2Container');
+                level2Container.innerHTML = `
+                    <div class="text-center">
+                        <div class="text-2xl mb-2">🏘️</div>
+                        <div class="text-white pixel-font text-xs mb-2">FASE 2</div>
+                        <button id="level2Button" class="game-button bg-blue-500 hover:bg-blue-600 text-white px-3 py-2 rounded pixel-font text-xs">
+                            SELECIONAR
+                        </button>
+                    </div>
+                `;
+                level2Container.className = "level-item bg-white/20 p-4 rounded-lg border-2 border-white/30";
+                
+                document.getElementById('level2Button').addEventListener('click', () => {
+                    gameState.currentLevel = 2;
+                    document.getElementById('levelTitle').textContent = 'FASE 2';
+                    document.getElementById('levelDesc').textContent = 'Depois de um tempo, Blue voltou com mais força!';
+                    showScreen('levelDescription');
+                });
+            }
+
+            if (gameState.level2Completed && !gameState.level3Unlocked) {
+                gameState.level3Unlocked = true;
+                const level3Container = document.getElementById('level3Container');
+                level3Container.innerHTML = `
+                    <div class="text-center">
+                        <div class="text-2xl mb-2">🚀</div>
+                        <div class="text-white pixel-font text-xs mb-2">FASE 3</div>
+                        <button id="level3Button" class="game-button bg-blue-500 hover:bg-blue-600 text-white px-3 py-2 rounded pixel-font text-xs">
+                            SELECIONAR
+                        </button>
+                    </div>
+                `;
+                level3Container.className = "level-item bg-white/20 p-4 rounded-lg border-2 border-white/30";
+                
+                document.getElementById('level3Button').addEventListener('click', () => {
+                    gameState.currentLevel = 3;
+                    document.getElementById('levelTitle').textContent = 'FASE 3';
+                    document.getElementById('levelDesc').textContent = 'Eles precisam de ajuda! Deixa eu entrar!';
+                    showScreen('levelDescription');
+                });
+            }
+
+            if (gameState.level3Completed && !gameState.level4Unlocked) {
+                gameState.level4Unlocked = true;
+                const level4Container = document.getElementById('level4Container');
+                level4Container.innerHTML = `
+                    <div class="text-center">
+                        <div class="text-2xl mb-2">🟩</div>
+                        <div class="text-white pixel-font text-xs mb-2">FASE 4</div>
+                        <button id="level4Button" class="game-button bg-blue-500 hover:bg-blue-600 text-white px-3 py-2 rounded pixel-font text-xs">
+                            SELECIONAR
+                        </button>
+                    </div>
+                `;
+                level4Container.className = "level-item bg-white/20 p-4 rounded-lg border-2 border-white/30";
+                
+                document.getElementById('level4Button').addEventListener('click', () => {
+                    gameState.currentLevel = 4;
+                    document.getElementById('levelTitle').textContent = 'FASE 4';
+                    document.getElementById('levelDesc').textContent = 'Um planeta quadrado? Vamos ver oque nos espera!';
+                    showScreen('levelDescription');
+                });
+            }
+
+            if (gameState.level4Completed && !gameState.world2Unlocked) {
+                gameState.world2Unlocked = true;
+                document.getElementById('world2Button').classList.remove('hidden');
+            }
+        }
+
+        function updateMoneyDisplay() {
+            document.getElementById('moneyDisplay').textContent = gameState.money;
+            document.getElementById('moneyDisplay2').textContent = gameState.money;
+            document.getElementById('moneyDisplay3').textContent = gameState.money;
+            document.getElementById('gameMoneyDisplay').textContent = gameState.money;
+            document.getElementById('shopMoneyDisplay').textContent = gameState.money;
+        }
+
+        function updateShopDisplay() {
+            if (gameState.hasShield) {
+                document.getElementById('buyShield').classList.add('hidden');
+                document.getElementById('shieldOwned').classList.remove('hidden');
+            }
+            if (gameState.hasLaser) {
+                document.getElementById('buyLaser').classList.add('hidden');
+                document.getElementById('laserOwned').classList.remove('hidden');
+            }
+            if (gameState.hasExtraLife) {
+                document.getElementById('buyExtraLife').classList.add('hidden');
+                document.getElementById('extraLifeOwned').classList.remove('hidden');
+            }
+            if (gameState.hasSwordRain) {
+                document.getElementById('buySwordRain').classList.add('hidden');
+                document.getElementById('swordRainOwned').classList.remove('hidden');
+            }
+        }
+
+        function updateAbilityButtons() {
+            const shieldBtn = document.getElementById('shieldBtn');
+            const laserBtn = document.getElementById('laserBtn');
+            const swordBtn = document.getElementById('swordBtn');
+            
+            if (gameState.hasShield) {
+                shieldBtn.classList.remove('hidden');
+            }
+            if (gameState.hasLaser) {
+                laserBtn.classList.remove('hidden');
+            }
+            if (gameState.hasSwordRain) {
+                swordBtn.classList.remove('hidden');
+            }
+        }
+
+        function addFloatingText(x, y, text, color = '#00FF00') {
+            floatingTexts.push({
+                x: x,
+                y: y,
+                text: text,
+                color: color,
+                opacity: 1,
+                startTime: Date.now()
+            });
+        }
+
+        // Ability functions
+        function useShield() {
+            if (gameState.hasShield && gameState.shieldCooldown <= 0 && !gameState.shieldActive) {
+                gameState.shieldActive = true;
+                gameState.shieldDuration = 5000; // 5 seconds in milliseconds
+                gameState.shieldCooldown = 25000; // 25 seconds cooldown
+            }
+        }
+
+        function useLaser() {
+            if (gameState.hasLaser && gameState.totalDamageDealt >= 30) {
+                // Create laser
+                lasers.push({
+                    x: player.x + player.width/2,
+                    y: 0,
+                    width: 50,
+                    height: canvas.height,
+                    duration: 500,
+                    startTime: Date.now(),
+                    damaged: false
+                });
+                
+                // Reset damage requirement
+                gameState.totalDamageDealt = 0;
+                document.getElementById('gameDamageDisplay').textContent = gameState.totalDamageDealt;
+            }
+        }
+
+        function useSwordRain() {
+            if (gameState.hasSwordRain && gameState.swordRainUsesLeft > 0) {
+                gameState.swordRainUsesLeft--;
+                document.getElementById('swordUses').textContent = gameState.swordRainUsesLeft;
+                
+                // Finger snap effect
+                fingerSnapEffect = {
+                    x: player.x + player.width/2,
+                    y: player.y + player.height/2,
+                    startTime: Date.now(),
+                    duration: 300
+                };
+                
+                // Create portals and swords after a small delay
+                setTimeout(() => {
+                    createSwordRain();
+                }, 200);
+            }
+        }
+
+        function createSwordRain() {
+            // Create 15 portals spread across the top of the screen
+            for (let i = 0; i < 15; i++) {
+                // Random position across the entire top area of the screen
+                const portalX = Math.random() * (canvas.width - 100) + 50; // Spread across full width
+                const portalY = Math.random() * 150 + 50; // Top 150 pixels of screen
+                
+                portals.push({
+                    x: portalX,
+                    y: portalY,
+                    startTime: Date.now() + i * 50, // Stagger portal creation
+                    duration: 1000
+                });
+                
+                // Create sword after portal appears
+                setTimeout(() => {
+                    swords.push({
+                        x: portalX,
+                        y: portalY - 30, // Espadas aparecem um pouco acima dos portais
+                        speed: 8,
+                        damage: 10,
+                        hit: false
+                    });
+                }, i * 50 + 300);
+            }
+        }
+
+        // Game functions
+        function startLevel1() {
+            showScreen('game');
+            resetGame();
+            startCutscene1();
+        }
+
+        function startLevel2() {
+            showScreen('game');
+            resetGame();
+            gameTime = 50;
+            startCutscene2();
+        }
+
+        function startLevel3() {
+            showScreen('game');
+            resetGame();
+            startCutscene3();
+        }
+
+        function startLevel4() {
+            showScreen('game');
+            resetGame();
+            gameTime = 60;
+            enemySpawnPaused = false;
+            startCutscene4();
+        }
+
+        function resetGame() {
+            player.x = 400;
+            player.y = 500;
+            player.hp = gameState.hasExtraLife ? 150 : 100;
+            player.maxHP = gameState.hasExtraLife ? 150 : 100;
+            bullets = [];
+            enemies = [];
+            lasers = [];
+            bombs = [];
+            boss = null;
+            gameTime = 30;
+            lastEnemySpawn = 0;
+            lastBigEnemySpawn = 0;
+            lastRollingEnemySpawn = 0;
+            floatingTexts = [];
+            gameState.gameRunning = false;
+            gameState.paused = false;
+            gameState.shieldActive = false;
+            gameState.shieldDuration = 0;
+            gameState.totalDamageDealt = 0;
+            enemySpawnPaused = false;
+            swords = [];
+            portals = [];
+            fingerSnapEffect = null;
+            
+            // Reset sword rain uses
+            if (gameState.hasSwordRain) {
+                gameState.swordRainUsesLeft = 1;
+                document.getElementById('swordUsesContainer').classList.remove('hidden');
+                document.getElementById('swordUses').textContent = gameState.swordRainUsesLeft;
+            } else {
+                document.getElementById('swordUsesContainer').classList.add('hidden');
+            }
+            
+            // Reset mobile controls to prevent auto-movement
+            mobileControls = {
+                left: false,
+                right: false,
+                shoot: false,
+                aimDirection: { x: 0, y: -1 }
+            };
+            
+            // Clear any stuck keys
+            keys = {};
+            
+            // Reset enemy bullets
+            window.enemyBullets = [];
+            
+            // Hide boss health bar and warning
+            document.getElementById('bossHealthBar').classList.add('hidden');
+            document.getElementById('bossWarning').classList.add('hidden');
+            
+            // Show/hide time display based on level
+            if (gameState.currentLevel === 3) {
+                document.getElementById('gameTimeContainer').style.display = 'none';
+            } else {
+                document.getElementById('gameTimeContainer').style.display = 'block';
+            }
+
+            // Update HP display
+            document.getElementById('playerHP').textContent = player.hp;
+            document.getElementById('playerMaxHP').textContent = player.maxHP;
+        }
+
+        // Cutscene functions (unchanged for brevity)
+        function startCutscene4() {
+            gameState.cutsceneActive = true;
+            document.getElementById('cutsceneOverlay').classList.remove('hidden');
+            
+            let cutsceneCanvas = document.createElement('canvas');
+            cutsceneCanvas.width = 400;
+            cutsceneCanvas.height = 300;
+            cutsceneCanvas.style.border = '2px solid white';
+            cutsceneCanvas.style.borderRadius = '8px';
+            
+            const cutsceneCtx = cutsceneCanvas.getContext('2d');
+            
+            // Square planet background
+            cutsceneCtx.fillStyle = '#228B22';
+            cutsceneCtx.fillRect(0, 0, 400, 300);
+            
+            // Square trees
+            cutsceneCtx.fillStyle = '#8B4513';
+            cutsceneCtx.fillRect(50, 150, 30, 80);
+            cutsceneCtx.fillRect(120, 140, 25, 90);
+            cutsceneCtx.fillRect(200, 160, 35, 70);
+            cutsceneCtx.fillRect(280, 145, 28, 85);
+            cutsceneCtx.fillRect(350, 155, 32, 75);
+            
+            // Square leaves
+            cutsceneCtx.fillStyle = '#32CD32';
+            cutsceneCtx.fillRect(40, 120, 50, 50);
+            cutsceneCtx.fillRect(110, 110, 45, 45);
+            cutsceneCtx.fillRect(185, 130, 65, 50);
+            cutsceneCtx.fillRect(270, 115, 48, 48);
+            cutsceneCtx.fillRect(335, 125, 62, 50);
+            
+            // Space ship landing
+            cutsceneCtx.fillStyle = '#808080';
+            cutsceneCtx.fillRect(180, 80, 40, 20);
+            cutsceneCtx.fillRect(190, 60, 20, 20);
+            
+            // Ship details
+            cutsceneCtx.fillStyle = '#FF0000';
+            cutsceneCtx.fillRect(185, 90, 5, 5);
+            cutsceneCtx.fillRect(195, 90, 5, 5);
+            cutsceneCtx.fillRect(205, 90, 5, 5);
+            
+            // Player getting out
+            cutsceneCtx.fillStyle = '#32CD32';
+            cutsceneCtx.beginPath();
+            cutsceneCtx.arc(160, 110, 10, 0, Math.PI * 2);
+            cutsceneCtx.fill();
+            
+            const contentDiv = document.getElementById('cutsceneContent');
+            contentDiv.innerHTML = '';
+            contentDiv.appendChild(cutsceneCanvas);
+            
+            const textDiv = document.createElement('div');
+            textDiv.textContent = 'A nave chega ao planeta quadrado... "Onde vocês estão em?"';
+            textDiv.className = 'text-white pixel-font text-sm text-center mt-4';
+            contentDiv.appendChild(textDiv);
+            
+            setTimeout(() => {
+                endCutscene();
+            }, 3000);
+        }
+
+        function startCutscene3() {
+            gameState.cutsceneActive = true;
+            document.getElementById('cutsceneOverlay').classList.remove('hidden');
+            
+            let cutsceneStep = 0;
+            let cutsceneCanvas = document.createElement('canvas');
+            cutsceneCanvas.width = 400;
+            cutsceneCanvas.height = 300;
+            cutsceneCanvas.style.border = '2px solid white';
+            cutsceneCanvas.style.borderRadius = '8px';
+            
+            const cutsceneCtx = cutsceneCanvas.getContext('2d');
+            
+            function renderCutscene3() {
+                // Background
+                cutsceneCtx.fillStyle = '#FFB6C1';
+                cutsceneCtx.fillRect(0, 0, 400, 300);
+                
+                // Planet machine
+                cutsceneCtx.fillStyle = '#C0C0C0';
+                cutsceneCtx.fillRect(150, 80, 100, 120);
+                cutsceneCtx.fillRect(175, 60, 50, 20);
+                
+                // Machine details
+                cutsceneCtx.fillStyle = '#0080FF';
+                cutsceneCtx.fillRect(170, 100, 60, 10);
+                cutsceneCtx.fillRect(170, 120, 60, 10);
+                cutsceneCtx.fillRect(170, 140, 60, 10);
+                
+                // Portal effect
+                cutsceneCtx.fillStyle = '#8A2BE2';
+                cutsceneCtx.beginPath();
+                cutsceneCtx.arc(200, 160, 20, 0, Math.PI * 2);
+                cutsceneCtx.fill();
+                
+                if (cutsceneStep >= 1) {
+                    // Player approaching
+                    cutsceneCtx.fillStyle = '#32CD32';
+                    cutsceneCtx.beginPath();
+                    cutsceneCtx.arc(80, 180, 15, 0, Math.PI * 2);
+                    cutsceneCtx.fill();
+                    
+                    cutsceneCtx.fillStyle = '#00FF00';
+                    cutsceneCtx.fillRect(73, 173, 5, 5);
+                    cutsceneCtx.fillRect(82, 173, 5, 5);
+                }
+                
+                if (cutsceneStep >= 2) {
+                    // Boss ball (red with green eyes)
+                    cutsceneCtx.fillStyle = '#FF0000';
+                    cutsceneCtx.beginPath();
+                    cutsceneCtx.arc(320, 180, 25, 0, Math.PI * 2);
+                    cutsceneCtx.fill();
+                    
+                    cutsceneCtx.fillStyle = '#00FF00';
+                    cutsceneCtx.fillRect(310, 170, 8, 8);
+                    cutsceneCtx.fillRect(322, 170, 8, 8);
+                }
+            }
+            
+            const cutsceneTexts = [
+                "O jogador chega a uma máquina de viagem entre planetas...",
+                '"Por favor, preciso usar a máquina para resgatar as bolas!"',
+                '"NÃO! Esta máquina é nossa!" - Bola Dona aparece',
+                '"Então será por bem ou por mal!" - A batalha começa!'
+            ];
+            
+            function showCutsceneStep() {
+                if (cutsceneStep < cutsceneTexts.length) {
+                    renderCutscene3();
+                    
+                    const contentDiv = document.getElementById('cutsceneContent');
+                    contentDiv.innerHTML = '';
+                    contentDiv.appendChild(cutsceneCanvas);
+                    
+                    const textDiv = document.createElement('div');
+                    textDiv.textContent = cutsceneTexts[cutsceneStep];
+                    textDiv.className = 'text-white pixel-font text-sm text-center mt-4';
+                    contentDiv.appendChild(textDiv);
+                    
+                    cutsceneStep++;
+                    setTimeout(showCutsceneStep, 3000);
+                } else {
+                    endCutscene();
+                }
+            }
+            
+            showCutsceneStep();
+        }
+
+        function startCutscene1() {
+            gameState.cutsceneActive = true;
+            document.getElementById('cutsceneOverlay').classList.remove('hidden');
+            
+            let cutsceneStep = 0;
+            let cutsceneCanvas = document.createElement('canvas');
+            cutsceneCanvas.width = 400;
+            cutsceneCanvas.height = 300;
+            cutsceneCanvas.style.border = '2px solid white';
+            cutsceneCanvas.style.borderRadius = '8px';
+            
+            const cutsceneCtx = cutsceneCanvas.getContext('2d');
+            
+            function renderCutscene() {
+                cutsceneCtx.fillStyle = '#87CEEB';
+                cutsceneCtx.fillRect(0, 0, 400, 300);
+                
+                cutsceneCtx.fillStyle = '#FFB6C1';
+                for (let i = 0; i < 15; i++) {
+                    const x = (i * 50) % 400;
+                    const y = (i * 30) % 300;
+                    cutsceneCtx.beginPath();
+                    cutsceneCtx.arc(x, y, 8 + (i % 3), 0, Math.PI * 2);
+                    cutsceneCtx.fill();
+                }
+                
+                if (cutsceneStep >= 1) {
+                    cutsceneCtx.fillStyle = '#808080';
+                    cutsceneCtx.fillRect(150, 50, 100, 40);
+                    cutsceneCtx.fillRect(175, 30, 50, 20);
+                    
+                    cutsceneCtx.fillStyle = '#FF0000';
+                    cutsceneCtx.fillRect(160, 60, 10, 10);
+                    cutsceneCtx.fillRect(180, 60, 10, 10);
+                    cutsceneCtx.fillRect(200, 60, 10, 10);
+                    cutsceneCtx.fillRect(220, 60, 10, 10);
+                }
+                
+                if (cutsceneStep >= 3) {
+                    cutsceneCtx.fillStyle = '#0066CC';
+                    cutsceneCtx.fillRect(185, 100, 30, 30);
+                    
+                    cutsceneCtx.fillStyle = '#FF0000';
+                    cutsceneCtx.fillRect(190, 105, 8, 8);
+                    cutsceneCtx.fillRect(202, 105, 8, 8);
+                    
+                    cutsceneCtx.fillStyle = '#FFD700';
+                    cutsceneCtx.fillRect(190, 100, 20, 5);
+                }
+            }
+            
+            const cutsceneTexts = [
+                "Uma nave espacial aparece no horizonte...",
+                "A nave pousa em meio às bolas do planeta.",
+                "Um quadrado azul especial sai da nave...",
+                '"Bolas? Interessante, quero pra mim!" - Blue',
+                "A invasão começou!"
+            ];
+            
+            function showCutsceneStep() {
+                if (cutsceneStep < cutsceneTexts.length) {
+                    renderCutscene();
+                    
+                    const contentDiv = document.getElementById('cutsceneContent');
+                    contentDiv.innerHTML = '';
+                    contentDiv.appendChild(cutsceneCanvas);
+                    
+                    const textDiv = document.createElement('div');
+                    textDiv.textContent = cutsceneTexts[cutsceneStep];
+                    textDiv.className = 'text-white pixel-font text-sm text-center mt-4';
+                    contentDiv.appendChild(textDiv);
+                    
+                    cutsceneStep++;
+                    setTimeout(showCutsceneStep, 2500);
+                } else {
+                    endCutscene();
+                }
+            }
+            
+            showCutsceneStep();
+        }
+
+        function startCutscene2() {
+            gameState.cutsceneActive = true;
+            document.getElementById('cutsceneOverlay').classList.remove('hidden');
+            
+            let cutsceneCanvas = document.createElement('canvas');
+            cutsceneCanvas.width = 400;
+            cutsceneCanvas.height = 300;
+            cutsceneCanvas.style.border = '2px solid white';
+            cutsceneCanvas.style.borderRadius = '8px';
+            
+            const cutsceneCtx = cutsceneCanvas.getContext('2d');
+            
+            cutsceneCtx.fillStyle = '#333333';
+            cutsceneCtx.fillRect(0, 0, 400, 300);
+            
+            cutsceneCtx.fillStyle = '#666666';
+            cutsceneCtx.fillRect(50, 200, 300, 80);
+            
+            cutsceneCtx.fillStyle = '#87CEEB';
+            cutsceneCtx.fillRect(150, 50, 100, 80);
+            
+            cutsceneCtx.fillStyle = '#8B4513';
+            cutsceneCtx.fillRect(160, 100, 15, 15);
+            cutsceneCtx.fillRect(175, 105, 10, 10);
+            cutsceneCtx.fillRect(185, 95, 20, 20);
+            
+            cutsceneCtx.fillStyle = '#FFB6C1';
+            cutsceneCtx.beginPath();
+            cutsceneCtx.arc(165, 118, 3, 0, Math.PI * 2);
+            cutsceneCtx.fill();
+            cutsceneCtx.beginPath();
+            cutsceneCtx.arc(190, 120, 3, 0, Math.PI * 2);
+            cutsceneCtx.fill();
+            
+            cutsceneCtx.fillStyle = '#0066CC';
+            cutsceneCtx.fillRect(80, 140, 30, 30);
+            cutsceneCtx.fillStyle = '#FF0000';
+            cutsceneCtx.fillRect(85, 145, 8, 8);
+            cutsceneCtx.fillRect(97, 145, 8, 8);
+            cutsceneCtx.fillStyle = '#FFD700';
+            cutsceneCtx.fillRect(85, 140, 20, 5);
+            
+            const contentDiv = document.getElementById('cutsceneContent');
+            contentDiv.innerHTML = '';
+            contentDiv.appendChild(cutsceneCanvas);
+            
+            const textDiv = document.createElement('div');
+            textDiv.textContent = '"Ali, PERFEITO!" - Blue observa uma vila no planeta';
+            textDiv.className = 'text-white pixel-font text-sm text-center mt-4';
+            contentDiv.appendChild(textDiv);
+            
+            setTimeout(() => {
+                endCutscene();
+            }, 3000);
+        }
+
+        function skipCutscene() {
+            endCutscene();
+        }
+
+        function endCutscene() {
+            gameState.cutsceneActive = false;
+            document.getElementById('cutsceneOverlay').classList.add('hidden');
+            startGameplay();
+        }
+
+        function startGameplay() {
+            gameState.gameRunning = true;
+            
+            if (gameState.currentLevel === 3) {
+                // Boss level - no timer, spawn boss
+                spawnBoss();
+                document.getElementById('bossHealthBar').classList.remove('hidden');
+            } else {
+                document.getElementById('gameTime').textContent = gameTime;
+            }
+            
+            document.getElementById('gameDamageDisplay').textContent = gameState.totalDamageDealt;
+            gameLoop();
+            
+            if (gameState.currentLevel !== 3) {
+                const gameTimer = setInterval(() => {
+                    if (!gameState.paused && gameState.gameRunning && !gameState.cutsceneActive) {
+                        gameTime--;
+                        document.getElementById('gameTime').textContent = gameTime;
+                        
+                        // Update ability timers
+                        if (gameState.shieldCooldown > 0) {
+                            gameState.shieldCooldown -= 1000;
+                        }
+                        
+                        if (gameTime <= 0) {
+                            clearInterval(gameTimer);
+                        }
+                    }
+                }, 1000);
+            } else {
+                // For boss level, still need shield cooldown timer
+                const abilityTimer = setInterval(() => {
+                    if (!gameState.paused && gameState.gameRunning && !gameState.cutsceneActive) {
+                        if (gameState.shieldCooldown > 0) {
+                            gameState.shieldCooldown -= 1000;
+                        }
+                    }
+                    if (!gameState.gameRunning) {
+                        clearInterval(abilityTimer);
+                    }
+                }, 1000);
+            }
+        }
+
+        function spawnBoss() {
+            boss = {
+                x: canvas.width / 2,
+                y: 150,
+                hp: 50,
+                maxHP: 50,
+                width: 50,
+                height: 50,
+                lastAttack: 0,
+                attackPattern: 0,
+                isSlam: false,
+                slamStartY: 0,
+                slamSpeed: 0,
+                phase: 1,
+                slamWarning: false,
+                warningStartTime: 0
+            };
+            
+            updateBossHealthBar();
+        }
+
+        function updateBossHealthBar() {
+            if (boss) {
+                const healthPercent = (boss.hp / boss.maxHP) * 100;
+                document.getElementById('bossHealth').style.width = healthPercent + '%';
+                
+                // Change boss name based on health
+                if (boss.hp <= boss.maxHP * 0.3) {
+                    document.getElementById('bossName').textContent = 'BOLA DONA FURIOSA';
+                } else if (boss.hp <= boss.maxHP * 0.6) {
+                    document.getElementById('bossName').textContent = 'BOLA DONA IRRITADA';
+                } else {
+                    document.getElementById('bossName').textContent = 'BOLA DONA';
+                }
+            }
+        }
+
+        function gameLoop() {
+            if (!gameState.gameRunning) return;
+            
+            if (!gameState.paused && !gameState.cutsceneActive) {
+                update();
+                render();
+            }
+            
+            requestAnimationFrame(gameLoop);
+        }
+
+        function update() {
+            // Player movement
+            if (keys['a'] || keys['ArrowLeft'] || mobileControls.left) {
+                player.x = Math.max(0, player.x - player.speed);
+            }
+            if (keys['d'] || keys['ArrowRight'] || mobileControls.right) {
+                player.x = Math.min(canvas.width - player.width, player.x + player.speed);
+            }
+
+            // Aim direction
+            if (keys['w'] || keys['ArrowUp']) player.aimDirection = { x: 0, y: -1 };
+            if (keys['q']) player.aimDirection = { x: -1, y: -1 };
+            if (keys['e']) player.aimDirection = { x: 1, y: -1 };
+            if (keys['a'] && (keys['w'] || keys['ArrowUp'])) player.aimDirection = { x: -1, y: -1 };
+            if (keys['d'] && (keys['w'] || keys['ArrowUp'])) player.aimDirection = { x: 1, y: -1 };
+
+            // Shooting
+            if (keys[' ']) {
+                shoot();
+            }
+
+            // Abilities
+            if (keys['x']) {
+                useShield();
+            }
+            if (keys['z']) {
+                useLaser();
+            }
+            if (keys['c']) {
+                useSwordRain();
+            }
+
+            // Update shield duration in frames
+            if (gameState.shieldDuration > 0) {
+                gameState.shieldDuration -= 16; // ~60fps
+                if (gameState.shieldDuration <= 0) {
+                    gameState.shieldActive = false;
+                }
+            }
+
+            // Update finger snap effect
+            if (fingerSnapEffect) {
+                const elapsed = Date.now() - fingerSnapEffect.startTime;
+                if (elapsed > fingerSnapEffect.duration) {
+                    fingerSnapEffect = null;
+                }
+            }
+
+            // Update portals
+            portals.forEach((portal, index) => {
+                const elapsed = Date.now() - portal.startTime;
+                if (elapsed > portal.duration) {
+                    portals.splice(index, 1);
+                }
+            });
+
+            // Update swords
+            swords.forEach((sword, index) => {
+                sword.y += sword.speed;
+                
+                if (sword.y > canvas.height) {
+                    swords.splice(index, 1);
+                    return;
+                }
+                
+                // Check sword collision with enemies
+                if (!sword.hit) {
+                    enemies.forEach((enemy, enemyIndex) => {
+                        const dx = sword.x - enemy.x;
+                        const dy = sword.y - enemy.y;
+                        const distance = Math.sqrt(dx * dx + dy * dy);
+                        
+                        if (distance < 25) {
+                            sword.hit = true;
+                            enemy.hp -= sword.damage;
+                            gameState.totalDamageDealt += sword.damage;
+                            document.getElementById('gameDamageDisplay').textContent = gameState.totalDamageDealt;
+                            
+                            addFloatingText(enemy.x, enemy.y - 20, `-${sword.damage}`, '#FF00FF');
+                            
+                            if (enemy.hp <= 0) {
+                                let money = 1;
+                                if (enemy.type === 'rolling') money = 3;
+                                if (enemy.type === 'rectangle') money = 5;
+                                
+                                addFloatingText(enemy.x, enemy.y, `+${money}`, '#00FF00');
+                                
+                                // Discover achievement
+                                if (enemy.type === 'small') discoverAchievement('small_enemy');
+                                else if (enemy.type === 'big') discoverAchievement('big_enemy');
+                                else if (enemy.type === 'rolling') discoverAchievement('rolling_enemy');
+                                else if (enemy.type === 'rectangle') discoverAchievement('rectangle_enemy');
+                                else if (enemy.type === 'minion') discoverAchievement('minion_enemy');
+                                
+                                enemies.splice(enemyIndex, 1);
+                                gameState.money += money;
+                                updateMoneyDisplay();
+                            }
+                        }
+                    });
+                    
+                    // Check sword collision with boss
+                    if (boss && !sword.hit) {
+                        const dx = sword.x - boss.x;
+                        const dy = sword.y - boss.y;
+                        const distance = Math.sqrt(dx * dx + dy * dy);
+                        
+                        if (distance < 30) {
+                            sword.hit = true;
+                            boss.hp -= sword.damage;
+                            gameState.totalDamageDealt += sword.damage;
+                            document.getElementById('gameDamageDisplay').textContent = gameState.totalDamageDealt;
+                            updateBossHealthBar();
+                            
+                            addFloatingText(boss.x, boss.y - 30, `-${sword.damage}`, '#FF00FF');
+                            
+                            if (boss.hp <= 0) {
+                                discoverAchievement('boss_enemy');
+                                winLevel();
+                            }
+                        }
+                    }
+                }
+            });
+
+            // Update bullets
+            bullets.forEach((bullet, index) => {
+                bullet.x += bullet.dx * 8;
+                bullet.y += bullet.dy * 8;
+                
+                // Check collision with enemy bullets (for level 4)
+                if (window.enemyBullets) {
+                    window.enemyBullets.forEach((enemyBullet, enemyBulletIndex) => {
+                        const dx = bullet.x - enemyBullet.x;
+                        const dy = bullet.y - enemyBullet.y;
+                        const distance = Math.sqrt(dx * dx + dy * dy);
+                        
+                        if (distance < 10) {
+                            bullets.splice(index, 1);
+                            window.enemyBullets.splice(enemyBulletIndex, 1);
+                        }
+                    });
+                }
+                
+                if (bullet.x < 0 || bullet.x > canvas.width || bullet.y < 0 || bullet.y > canvas.height) {
+                    bullets.splice(index, 1);
+                }
+            });
+
+            // Update lasers
+            lasers.forEach((laser, index) => {
+                const elapsed = Date.now() - laser.startTime;
+                if (elapsed > laser.duration) {
+                    lasers.splice(index, 1);
+                }
+            });
+
+            // Update floating texts
+            floatingTexts.forEach((text, index) => {
+                const elapsed = Date.now() - text.startTime;
+                text.y -= 1;
+                text.opacity = Math.max(0, 1 - elapsed / 1500);
+                
+                if (text.opacity <= 0) {
+                    floatingTexts.splice(index, 1);
+                }
+            });
+
+            // Level 3 Boss Logic
+            if (gameState.currentLevel === 3 && boss) {
+                updateBoss();
+            } else if (gameState.currentLevel === 4) {
+                // Level 4 Rectangle enemy spawning - FIXED
+                const currentTime = Date.now();
+                
+                // Spawn rectangle enemies every 5 seconds, stop spawning after 30 seconds have passed
+                if (currentTime - lastEnemySpawn > 5000 && !gameState.cutsceneActive && gameTime > 30) {
+                    // Spawn rectangles from ground level
+                    spawnRectangleEnemy('left', 0);
+                    spawnRectangleEnemy('right', 0);
+                    lastEnemySpawn = currentTime;
+                }
+                
+                if (gameTime <= 0 && enemies.length === 0) {
+                    winLevel();
+                }
+            } else {
+                // Normal enemy spawning for levels 1 and 2 (nerfed level 2)
+                const currentTime = Date.now();
+                
+                if (currentTime - lastEnemySpawn > 3000 && !gameState.cutsceneActive && gameTime > 0) {
+                    spawnSmallEnemy();
+                    if (gameState.currentLevel === 2) {
+                        spawnSmallEnemy();
+                    } else {
+                        spawnSmallEnemy();
+                    }
+                    lastEnemySpawn = currentTime;
+                }
+                
+                if (currentTime - lastBigEnemySpawn > 7000 && !gameState.cutsceneActive && gameTime > 0) {
+                    spawnBigEnemy();
+                    lastBigEnemySpawn = currentTime;
+                }
+
+                if (gameState.currentLevel === 2 && currentTime - lastRollingEnemySpawn > 10000 && !gameState.cutsceneActive && gameTime > 0) {
+                    spawnRollingEnemy();
+                    lastRollingEnemySpawn = currentTime;
+                }
+                
+                if (gameTime <= 0 && enemies.length === 0) {
+                    winLevel();
+                }
+            }
+
+            // Update bombs
+            bombs.forEach((bomb, index) => {
+                bomb.y += bomb.speed;
+                
+                // Check if bomb hits player
+                const dx = bomb.x - (player.x + player.width/2);
+                const dy = bomb.y - (player.y + player.height/2);
+                const distance = Math.sqrt(dx * dx + dy * dy);
+                
+                if (distance < 25 && !bomb.destroyed && !gameState.shieldActive) {
+                    player.hp -= 10;
+                    bombs.splice(index, 1);
+                    document.getElementById('playerHP').textContent = player.hp;
+                    
+                    if (player.hp <= 0) {
+                        gameOver();
+                    }
+                }
+                
+                // Check if bullet hits bomb
+                bullets.forEach((bullet, bulletIndex) => {
+                    const bdx = bullet.x - bomb.x;
+                    const bdy = bullet.y - bomb.y;
+                    const bdistance = Math.sqrt(bdx * bdx + bdy * bdy);
+                    
+                    if (bdistance < 15 && !bomb.destroyed) {
+                        bomb.destroyed = true;
+                        bullets.splice(bulletIndex, 1);
+                        bombs.splice(index, 1);
+                        addFloatingText(bomb.x, bomb.y, 'BOMBA DESTRUÍDA!', '#00FF00');
+                        discoverAchievement('bomb');
+                    }
+                });
+                
+                // Remove bomb if it goes off screen
+                if (bomb.y > canvas.height) {
+                    bombs.splice(index, 1);
+                }
+            });
+
+            // Update regular enemies (for levels 1, 2, and 4)
+            enemies.forEach((enemy, enemyIndex) => {
+                if (enemy.type === 'small') {
+                    const dx = player.x - enemy.x;
+                    const dy = player.y - enemy.y;
+                    const distance = Math.sqrt(dx * dx + dy * dy);
+                    
+                    if (distance > 0) {
+                        enemy.x += (dx / distance) * enemy.speed;
+                        enemy.y += (dy / distance) * enemy.speed;
+                    }
+                    
+                    if (distance < 30 && !gameState.shieldActive) {
+                        player.hp -= 5;
+                        enemies.splice(enemyIndex, 1);
+                        document.getElementById('playerHP').textContent = player.hp;
+                        
+                        if (player.hp <= 0) {
+                            gameOver();
+                        }
+                    }
+                } else if (enemy.type === 'big') {
+                    const currentTime = Date.now();
+                    if (currentTime - enemy.lastShot > 2000) {
+                        shootEnemyBullet(enemy);
+                        enemy.lastShot = currentTime;
+                    }
+                } else if (enemy.type === 'rolling') {
+                    enemy.x += enemy.direction * enemy.speed;
+                    
+                    const dx = player.x - enemy.x;
+                    const dy = player.y - enemy.y;
+                    const distance = Math.sqrt(dx * dx + dy * dy);
+                    
+                    if (distance < 35 && !gameState.shieldActive) {
+                        player.hp -= 30;
+                        enemies.splice(enemyIndex, 1);
+                        document.getElementById('playerHP').textContent = player.hp;
+                        
+                        if (player.hp <= 0) {
+                            gameOver();
+                        }
+                    }
+                    
+                    if (enemy.x < -50 || enemy.x > canvas.width + 50) {
+                        enemies.splice(enemyIndex, 1);
+                    }
+                } else if (enemy.type === 'minion') {
+                    // Minions move toward player
+                    const dx = player.x - enemy.x;
+                    const dy = player.y - enemy.y;
+                    const distance = Math.sqrt(dx * dx + dy * dy);
+                    
+                    if (distance > 0) {
+                        enemy.x += (dx / distance) * enemy.speed;
+                        enemy.y += (dy / distance) * enemy.speed;
+                    }
+                    
+                    if (distance < 25 && !gameState.shieldActive) {
+                        player.hp -= 5;
+                        enemies.splice(enemyIndex, 1);
+                        document.getElementById('playerHP').textContent = player.hp;
+                        
+                        if (player.hp <= 0) {
+                            gameOver();
+                        }
+                    }
+                } else if (enemy.type === 'rectangle') {
+                    // Rectangle enemies (level 4) - Move toward player slower
+                    const dx = player.x - enemy.x;
+                    const dy = player.y - enemy.y;
+                    const distance = Math.sqrt(dx * dx + dy * dy);
+                    
+                    if (distance > 0) {
+                        enemy.x += (dx / distance) * enemy.speed;
+                        enemy.y += (dy / distance) * enemy.speed;
+                    }
+                    
+                    const currentTime = Date.now();
+                    if (currentTime - enemy.lastShot > 2000) {
+                        shootPoisonBullet(enemy);
+                        enemy.lastShot = currentTime;
+                    }
+                    
+                    if (distance < 30 && !gameState.shieldActive) {
+                        player.hp -= 12;
+                        enemies.splice(enemyIndex, 1);
+                        document.getElementById('playerHP').textContent = player.hp;
+                        
+                        if (player.hp <= 0) {
+                            gameOver();
+                        }
+                    }
+                }
+
+                // Check bullet collisions with enemies
+                bullets.forEach((bullet, bulletIndex) => {
+                    const dx = bullet.x - enemy.x;
+                    const dy = bullet.y - enemy.y;
+                    const distance = Math.sqrt(dx * dx + dy * dy);
+                    
+                    if (distance < 20) {
+                        bullets.splice(bulletIndex, 1);
+                        enemy.hp--;
+                        gameState.totalDamageDealt += 1;
+                        document.getElementById('gameDamageDisplay').textContent = gameState.totalDamageDealt;
+                        
+                        if (enemy.hp <= 0) {
+                            let money = 1;
+                            if (enemy.type === 'rolling') money = 3;
+                            if (enemy.type === 'rectangle') money = 5;
+                            
+                            addFloatingText(enemy.x, enemy.y, `+${money}`, '#00FF00');
+                            
+                            // Discover achievement
+                            if (enemy.type === 'small') discoverAchievement('small_enemy');
+                            else if (enemy.type === 'big') discoverAchievement('big_enemy');
+                            else if (enemy.type === 'rolling') discoverAchievement('rolling_enemy');
+                            else if (enemy.type === 'rectangle') discoverAchievement('rectangle_enemy');
+                            else if (enemy.type === 'minion') discoverAchievement('minion_enemy');
+                            
+                            enemies.splice(enemyIndex, 1);
+                            gameState.money += money;
+                            updateMoneyDisplay();
+                        }
+                    }
+                });
+
+                // Check laser collisions with enemies
+                lasers.forEach((laser, laserIndex) => {
+                    if (enemy.x > laser.x - laser.width/2 && enemy.x < laser.x + laser.width/2 && 
+                        enemy.y > laser.y && enemy.y < laser.y + laser.height && !laser.damaged) {
+                        let damage = 10;
+                        if (enemy.type === 'rolling') damage = 3;
+                        if (enemy.type === 'rectangle') damage = 5;
+                        
+                        enemy.hp -= damage;
+                        gameState.totalDamageDealt += damage;
+                        document.getElementById('gameDamageDisplay').textContent = gameState.totalDamageDealt;
+                        laser.damaged = true;
+                        
+                        if (enemy.hp <= 0) {
+                            let money = 1;
+                            if (enemy.type === 'rolling') money = 3;
+                            if (enemy.type === 'rectangle') money = 5;
+                            
+                            addFloatingText(enemy.x, enemy.y, `+${money}`, '#00FF00');
+                            
+                            // Discover achievement
+                            if (enemy.type === 'small') discoverAchievement('small_enemy');
+                            else if (enemy.type === 'big') discoverAchievement('big_enemy');
+                            else if (enemy.type === 'rolling') discoverAchievement('rolling_enemy');
+                            else if (enemy.type === 'rectangle') discoverAchievement('rectangle_enemy');
+                            else if (enemy.type === 'minion') discoverAchievement('minion_enemy');
+                            
+                            enemies.splice(enemyIndex, 1);
+                            gameState.money += money;
+                            updateMoneyDisplay();
+                        }
+                    }
+                });
+            });
+
+            // Update enemy bullets
+            if (window.enemyBullets) {
+                window.enemyBullets.forEach((bullet, index) => {
+                    bullet.x += bullet.dx * 6;
+                    bullet.y += bullet.dy * 6;
+                    
+                    const dx = bullet.x - (player.x + player.width/2);
+                    const dy = bullet.y - (player.y + player.height/2);
+                    const distance = Math.sqrt(dx * dx + dy * dy);
+                    
+                    if (distance < 20 && !gameState.shieldActive) {
+                        player.hp -= (bullet.poison ? 15 : 10);
+                        window.enemyBullets.splice(index, 1);
+                        document.getElementById('playerHP').textContent = player.hp;
+                        
+                        if (bullet.poison) {
+                            discoverAchievement('poison_bullet');
+                        }
+                        
+                        if (player.hp <= 0) {
+                            gameOver();
+                        }
+                    }
+                    
+                    if (bullet.x < 0 || bullet.x > canvas.width || bullet.y < 0 || bullet.y > canvas.height) {
+                        window.enemyBullets.splice(index, 1);
+                    }
+                });
+            }
+        }
+
+        function updateBoss() {
+            const currentTime = Date.now();
+            
+            // Determine boss phase based on health
+            if (boss.hp <= boss.maxHP * 0.3) {
+                boss.phase = 3; // Enraged phase
+            } else if (boss.hp <= boss.maxHP * 0.6) {
+                boss.phase = 2; // Angry phase
+            } else {
+                boss.phase = 1; // Normal phase
+            }
+            
+            // Boss slam attack warning system
+            if (boss.slamWarning) {
+                const warningElapsed = currentTime - boss.warningStartTime;
+                if (warningElapsed >= 1500) { // 1.5 seconds warning
+                    boss.slamWarning = false;
+                    boss.isSlam = true;
+                    boss.slamStartY = boss.y;
+                    boss.slamSpeed = 2 + boss.phase;
+                    boss.x = player.x + player.width/2;
+                    document.getElementById('bossWarning').classList.add('hidden');
+                }
+            }
+            
+            // Boss slam attack
+            if (boss.isSlam) {
+                boss.y += boss.slamSpeed;
+                boss.slamSpeed += 0.8;
+                
+                // Check if boss hits player
+                const dx = boss.x - (player.x + player.width/2);
+                const dy = boss.y - (player.y + player.height/2);
+                const distance = Math.sqrt(dx * dx + dy * dy);
+                
+                if (distance < 40 && !gameState.shieldActive) {
+                    player.hp -= (boss.phase * 15);
+                    document.getElementById('playerHP').textContent = player.hp;
+                    boss.isSlam = false;
+                    boss.y = 150;
+                    boss.lastAttack = currentTime;
+                    
+                    if (player.hp <= 0) {
+                        gameOver();
+                        return;
+                    }
+                }
+                
+                // If boss hits ground, reset
+                if (boss.y > canvas.height - 100) {
+                    boss.isSlam = false;
+                    boss.y = 150;
+                    boss.lastAttack = currentTime;
+                }
+            }
+            
+            // Boss attack pattern - more frequent attacks in higher phases
+            const attackInterval = Math.max(1500, 3000 - (boss.phase * 500));
+            if (currentTime - boss.lastAttack > attackInterval && !boss.isSlam && !boss.slamWarning) {
+                let attackType;
+                
+                if (boss.phase === 3) {
+                    attackType = Math.floor(Math.random() * 4);
+                } else if (boss.phase === 2) {
+                    attackType = Math.floor(Math.random() * 3);
+                } else {
+                    attackType = Math.floor(Math.random() * 3);
+                }
+                
+                if (attackType === 0) {
+                    spawnBombs(boss.phase);
+                    boss.lastAttack = currentTime;
+                } else if (attackType === 1) {
+                    // Start slam warning
+                    boss.slamWarning = true;
+                    boss.warningStartTime = currentTime;
+                    document.getElementById('bossWarning').classList.remove('hidden');
+                } else if (attackType === 2) {
+                    spawnMinions(boss.phase);
+                    boss.lastAttack = currentTime;
+                } else if (attackType === 3 && boss.phase === 3) {
+                    for (let i = 0; i < 5; i++) {
+                        setTimeout(() => spawnBombs(1), i * 300);
+                    }
+                    boss.lastAttack = currentTime;
+                }
+            }
+            
+            // Check bullet collisions with boss
+            bullets.forEach((bullet, bulletIndex) => {
+                const dx = bullet.x - boss.x;
+                const dy = bullet.y - boss.y;
+                const distance = Math.sqrt(dx * dx + dy * dy);
+                
+                if (distance < 30) {
+                    bullets.splice(bulletIndex, 1);
+                    boss.hp--;
+                    gameState.totalDamageDealt += 1;
+                    document.getElementById('gameDamageDisplay').textContent = gameState.totalDamageDealt;
+                    updateBossHealthBar();
+                    
+                    addFloatingText(boss.x, boss.y - 30, '-1', '#FF0000');
+                    
+                    if (boss.hp <= 0) {
+                        discoverAchievement('boss_enemy');
+                        winLevel();
+                    }
+                }
+            });
+            
+            // Check laser collisions with boss
+            lasers.forEach((laser, laserIndex) => {
+                if (boss.x > laser.x - laser.width/2 && boss.x < laser.x + laser.width/2 && 
+                    boss.y > laser.y && boss.y < laser.y + laser.height && !laser.damaged) {
+                    boss.hp -= 8;
+                    gameState.totalDamageDealt += 8;
+                    document.getElementById('gameDamageDisplay').textContent = gameState.totalDamageDealt;
+                    updateBossHealthBar();
+                    laser.damaged = true;
+                    
+                    addFloatingText(boss.x, boss.y - 30, '-8', '#FF0000');
+                    
+                    if (boss.hp <= 0) {
+                        discoverAchievement('boss_enemy');
+                        winLevel();
+                    }
+                }
+            });
+        }
+
+        function spawnBombs(count = 2) {
+            for (let i = 0; i < count; i++) {
+                bombs.push({
+                    x: Math.random() * (canvas.width - 100) + 50,
+                    y: 50,
+                    speed: 3 + Math.random() * 2,
+                    destroyed: false
+                });
+            }
+        }
+
+        function spawnMinions(count = 2) {
+            for (let i = 0; i < count; i++) {
+                enemies.push({
+                    type: 'minion',
+                    x: boss.x + (i === 0 ? -50 : 50),
+                    y: boss.y,
+                    hp: 1,
+                    speed: 2 + Math.random()
+                });
+            }
+        }
+
+        function spawnRectangleEnemy(side, index) {
+            // Fixed: spawn at ground level, not flying
+            const x = side === 'left' ? -30 : canvas.width + 30;
+            const y = canvas.height - 100; // Ground level
+            
+            enemies.push({
+                type: 'rectangle',
+                x: x,
+                y: y,
+                hp: 4,
+                speed: 0.8, // Reduced speed (was 1.5)
+                direction: side === 'left' ? 1 : -1,
+                lastShot: Date.now() + (index * 500)
+            });
+        }
+
+        function shootPoisonBullet(enemy) {
+            if (!window.enemyBullets) window.enemyBullets = [];
+            
+            const dx = (player.x + player.width/2) - enemy.x;
+            const dy = (player.y + player.height/2) - enemy.y;
+            const distance = Math.sqrt(dx * dx + dy * dy);
+            
+            window.enemyBullets.push({
+                x: enemy.x,
+                y: enemy.y,
+                dx: dx / distance,
+                dy: dy / distance,
+                poison: true
+            });
+        }
+
+        function render() {
+            // Clear canvas and draw background based on level
+            if (gameState.currentLevel === 1) {
+                ctx.fillStyle = '#87CEEB';
+                ctx.fillRect(0, 0, canvas.width, canvas.height);
+                
+                ctx.fillStyle = '#FFB6C1';
+                for (let i = 0; i < 20; i++) {
+                    const x = (i * 123) % canvas.width;
+                    const y = (i * 87) % canvas.height;
+                    ctx.beginPath();
+                    ctx.arc(x, y, 10 + (i % 5), 0, Math.PI * 2);
+                    ctx.fill();
+                }
+            } else if (gameState.currentLevel === 2) {
+                ctx.fillStyle = '#98FB98';
+                ctx.fillRect(0, 0, canvas.width, canvas.height);
+                
+                ctx.fillStyle = '#8B4513';
+                ctx.fillRect(50, 450, 80, 60);
+                ctx.fillRect(200, 440, 100, 70);
+                ctx.fillRect(350, 460, 70, 50);
+                ctx.fillRect(500, 430, 90, 80);
+                ctx.fillRect(650, 450, 75, 60);
+                
+                ctx.fillStyle = '#B22222';
+                ctx.fillRect(45, 430, 90, 20);
+                ctx.fillRect(195, 420, 110, 20);
+                ctx.fillRect(345, 440, 80, 20);
+                ctx.fillRect(495, 410, 100, 20);
+                ctx.fillRect(645, 430, 85, 20);
+                
+                ctx.fillStyle = '#FFB6C1';
+                for (let i = 0; i < 12; i++) {
+                    const x = 100 + (i * 60) % 600;
+                    const y = 520 + (i % 3) * 20;
+                    ctx.beginPath();
+                    ctx.arc(x, y, 8, 0, Math.PI * 2);
+                    ctx.fill();
+                    
+                    ctx.fillStyle = '#000000';
+                    ctx.fillRect(x - 3, y - 2, 2, 2);
+                    ctx.fillRect(x + 1, y - 2, 2, 2);
+                    ctx.fillStyle = '#FFB6C1';
+                }
+            } else if (gameState.currentLevel === 3) {
+                // Phase 3 background - ball planet with machine
+                ctx.fillStyle = '#FFB6C1';
+                ctx.fillRect(0, 0, canvas.width, canvas.height);
+                
+                // Draw planet machine
+                ctx.fillStyle = '#C0C0C0';
+                ctx.fillRect(350, 480, 100, 120);
+                ctx.fillRect(375, 460, 50, 20);
+                
+                // Machine details
+                ctx.fillStyle = '#0080FF';
+                ctx.fillRect(370, 500, 60, 10);
+                ctx.fillRect(370, 520, 60, 10);
+                ctx.fillRect(370, 540, 60, 10);
+                
+                // Portal effect
+                ctx.fillStyle = '#8A2BE2';
+                ctx.beginPath();
+                ctx.arc(400, 560, 20, 0, Math.PI * 2);
+                ctx.fill();
+                
+                // Ground
+                ctx.fillStyle = '#98FB98';
+                ctx.fillRect(0, canvas.height - 50, canvas.width, 50);
+            } else if (gameState.currentLevel === 4) {
+                // Phase 4 background - square forest
+                ctx.fillStyle = '#228B22';
+                ctx.fillRect(0, 0, canvas.width, canvas.height);
+                
+                // Square trees
+                ctx.fillStyle = '#8B4513';
+                for (let i = 0; i < 8; i++) {
+                    const x = 50 + i * 100;
+                    const height = 80 + (i % 3) * 20;
+                    ctx.fillRect(x, canvas.height - height - 50, 30, height);
+                }
+                
+                // Square leaves
+                ctx.fillStyle = '#32CD32';
+                for (let i = 0; i < 8; i++) {
+                    const x = 35 + i * 100;
+                    const treeHeight = 80 + (i % 3) * 20;
+                    ctx.fillRect(x, canvas.height - treeHeight - 100, 60, 60);
+                }
+                
+                // Ground
+                ctx.fillStyle = '#8FBC8F';
+                ctx.fillRect(0, canvas.height - 50, canvas.width, 50);
+            }
+
+            // Draw portals
+            portals.forEach(portal => {
+                const elapsed = Date.now() - portal.startTime;
+                if (elapsed >= 0) {
+                    const alpha = Math.max(0, 1 - elapsed / portal.duration);
+                    ctx.globalAlpha = alpha;
+                    
+                    // Purple swirling portal
+                    ctx.fillStyle = '#8A2BE2';
+                    ctx.beginPath();
+                    ctx.arc(portal.x, portal.y, 20, 0, Math.PI * 2);
+                    ctx.fill();
+                    
+                    ctx.fillStyle = '#9932CC';
+                    ctx.beginPath();
+                    ctx.arc(portal.x, portal.y, 10, 0, Math.PI * 2);
+                    ctx.fill();
+                    
+                    ctx.globalAlpha = 1;
+                }
+            });
+
+            // Draw swords
+            swords.forEach(sword => {
+                ctx.fillStyle = sword.hit ? '#666666' : '#C0C0C0';
+                
+                // Sword blade
+                ctx.fillRect(sword.x - 3, sword.y, 6, 30);
+                
+                // Sword hilt
+                ctx.fillStyle = sword.hit ? '#444444' : '#8B4513';
+                ctx.fillRect(sword.x - 5, sword.y + 30, 10, 8);
+                
+                // Sword guard
+                ctx.fillStyle = sword.hit ? '#333333' : '#FFD700';
+                ctx.fillRect(sword.x - 8, sword.y + 25, 16, 3);
+            });
+
+            // Draw finger snap effect
+            if (fingerSnapEffect) {
+                const elapsed = Date.now() - fingerSnapEffect.startTime;
+                const alpha = Math.max(0, 1 - elapsed / fingerSnapEffect.duration);
+                
+                ctx.globalAlpha = alpha;
+                ctx.fillStyle = '#FF0000';
+                ctx.beginPath();
+                ctx.arc(fingerSnapEffect.x, fingerSnapEffect.y, 30, 0, Math.PI * 2);
+                ctx.fill();
+                
+                ctx.fillStyle = '#FF4444';
+                ctx.beginPath();
+                ctx.arc(fingerSnapEffect.x, fingerSnapEffect.y, 20, 0, Math.PI * 2);
+                ctx.fill();
+                
+                ctx.globalAlpha = 1;
+            }
+
+            // Draw lasers
+            ctx.fillStyle = '#00AAFF';
+            ctx.globalAlpha = 0.8;
+            lasers.forEach(laser => {
+                ctx.fillRect(laser.x - laser.width/2, laser.y, laser.width, laser.height);
+            });
+            ctx.globalAlpha = 1;
+
+            // Draw player
+            ctx.fillStyle = '#32CD32';
+            ctx.beginPath();
+            ctx.arc(player.x + player.width/2, player.y + player.height/2, player.width/2, 0, Math.PI * 2);
+            ctx.fill();
+            
+            ctx.fillStyle = '#00FF00';
+            ctx.fillRect(player.x + 8, player.y + 8, 5, 5);
+            ctx.fillRect(player.x + 17, player.y + 8, 5, 5);
+
+            // Draw shield
+            if (gameState.shieldActive) {
+                ctx.strokeStyle = '#00AAFF';
+                ctx.lineWidth = 4;
+                ctx.beginPath();
+                ctx.arc(player.x + player.width/2, player.y + player.height/2, player.width/2 + 10, 0, Math.PI * 2);
+                ctx.stroke();
+            }
+
+            // Draw boss (level 3)
+            if (boss) {
+                if (boss.hp <= boss.maxHP * 0.3) {
+                    ctx.fillStyle = '#8B0000';
+                } else if (boss.hp <= boss.maxHP * 0.6) {
+                    ctx.fillStyle = '#DC143C';
+                } else {
+                    ctx.fillStyle = '#FF0000';
+                }
+                
+                ctx.beginPath();
+                ctx.arc(boss.x, boss.y, boss.width/2, 0, Math.PI * 2);
+                ctx.fill();
+                
+                if (boss.phase >= 2) {
+                    ctx.shadowColor = '#00FF00';
+                    ctx.shadowBlur = 10;
+                }
+                
+                ctx.fillStyle = '#00FF00';
+                ctx.fillRect(boss.x - 15, boss.y - 15, 12, 12);
+                ctx.fillRect(boss.x + 3, boss.y - 15, 12, 12);
+                
+                ctx.fillStyle = '#000000';
+                ctx.fillRect(boss.x - 10, boss.y - 10, 4, 4);
+                ctx.fillRect(boss.x + 8, boss.y - 10, 4, 4);
+                
+                ctx.shadowBlur = 0;
+            }
+
+            // Draw bombs
+            ctx.fillStyle = '#FF4500';
+            bombs.forEach(bomb => {
+                if (!bomb.destroyed) {
+                    ctx.beginPath();
+                    ctx.arc(bomb.x, bomb.y, 15, 0, Math.PI * 2);
+                    ctx.fill();
+                    
+                    ctx.fillStyle = '#000000';
+                    ctx.fillRect(bomb.x - 2, bomb.y - 20, 4, 10);
+                    ctx.fillStyle = '#FF4500';
+                }
+            });
+
+            // Draw bullets
+            ctx.fillStyle = '#FFFF00';
+            bullets.forEach(bullet => {
+                ctx.beginPath();
+                ctx.arc(bullet.x, bullet.y, 3, 0, Math.PI * 2);
+                ctx.fill();
+                
+                ctx.strokeStyle = '#FF8C00';
+                ctx.lineWidth = 2;
+                ctx.stroke();
+            });
+
+            // Draw enemies
+            enemies.forEach(enemy => {
+                if (enemy.type === 'small') {
+                    ctx.fillStyle = '#0000FF';
+                    ctx.fillRect(enemy.x - 10, enemy.y - 10, 20, 20);
+                } else if (enemy.type === 'big') {
+                    ctx.fillStyle = '#0000FF';
+                    ctx.fillRect(enemy.x - 20, enemy.y - 20, 40, 40);
+                    ctx.fillStyle = '#FF0000';
+                    ctx.fillRect(enemy.x - 15, enemy.y - 15, 8, 8);
+                    ctx.fillRect(enemy.x + 7, enemy.y - 15, 8, 8);
+                } else if (enemy.type === 'rolling') {
+                    ctx.fillStyle = '#00AA00';
+                    ctx.fillRect(enemy.x - 15, enemy.y - 15, 30, 30);
+                    ctx.strokeStyle = '#FFFFFF';
+                    ctx.lineWidth = 2;
+                    ctx.beginPath();
+                    ctx.moveTo(enemy.x - 25, enemy.y);
+                    ctx.lineTo(enemy.x - 35, enemy.y);
+                    ctx.stroke();
+                } else if (enemy.type === 'minion') {
+                    ctx.fillStyle = '#FFA500';
+                    ctx.beginPath();
+                    ctx.arc(enemy.x, enemy.y, 10, 0, Math.PI * 2);
+                    ctx.fill();
+                    
+                    ctx.fillStyle = '#000000';
+                    ctx.fillRect(enemy.x - 5, enemy.y - 5, 3, 3);
+                    ctx.fillRect(enemy.x + 2, enemy.y - 5, 3, 3);
+                } else if (enemy.type === 'rectangle') {
+                    ctx.fillStyle = '#32CD32';
+                    ctx.fillRect(enemy.x - 20, enemy.y - 15, 40, 30);
+                    
+                    ctx.shadowColor = '#8A2BE2';
+                    ctx.shadowBlur = 5;
+                    ctx.fillStyle = '#8A2BE2';
+                    ctx.fillRect(enemy.x - 12, enemy.y - 8, 8, 8);
+                    ctx.fillRect(enemy.x + 4, enemy.y - 8, 8, 8);
+                    ctx.shadowBlur = 0;
+                    
+                    ctx.fillStyle = '#000000';
+                    ctx.fillRect(enemy.x - 22, enemy.y - 25, 44, 6);
+                    ctx.fillStyle = '#FF0000';
+                    ctx.fillRect(enemy.x - 20, enemy.y - 23, 40, 2);
+                    ctx.fillStyle = '#00FF00';
+                    const hpPercent = enemy.hp / 4;
+                    ctx.fillRect(enemy.x - 20, enemy.y - 23, 40 * hpPercent, 2);
+                }
+            });
+
+            // Draw enemy bullets
+            if (window.enemyBullets) {
+                window.enemyBullets.forEach(bullet => {
+                    ctx.fillStyle = bullet.poison ? '#8A2BE2' : '#FF0000';
+                    ctx.beginPath();
+                    ctx.arc(bullet.x, bullet.y, 4, 0, Math.PI * 2);
+                    ctx.fill();
+                    
+                    if (bullet.poison) {
+                        ctx.strokeStyle = '#9932CC';
+                        ctx.lineWidth = 2;
+                        ctx.stroke();
+                    }
+                });
+            }
+
+            // Draw floating texts
+            ctx.font = '12px "Press Start 2P"';
+            ctx.textAlign = 'center';
+            floatingTexts.forEach(text => {
+                ctx.globalAlpha = text.opacity;
+                ctx.fillStyle = text.color;
+                ctx.fillText(text.text, text.x, text.y);
+            });
+            ctx.globalAlpha = 1;
+
+            // Draw aim indicator
+            ctx.strokeStyle = '#FFFFFF';
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            const aimX = player.x + player.width/2 + player.aimDirection.x * 30;
+            const aimY = player.y + player.height/2 + player.aimDirection.y * 30;
+            ctx.moveTo(player.x + player.width/2, player.y + player.height/2);
+            ctx.lineTo(aimX, aimY);
+            ctx.stroke();
+            
+            ctx.fillStyle = '#FFFFFF';
+            ctx.beginPath();
+            ctx.arc(aimX, aimY, 4, 0, Math.PI * 2);
+            ctx.fill();
+        }
+
+        function shoot() {
+            const currentTime = Date.now();
+            if (!window.lastShot || currentTime - window.lastShot > 200) {
+                bullets.push({
+                    x: player.x + player.width/2,
+                    y: player.y + player.height/2,
+                    dx: player.aimDirection.x,
+                    dy: player.aimDirection.y
+                });
+                window.lastShot = currentTime;
+            }
+        }
+
+        function spawnSmallEnemy() {
+            enemies.push({
+                type: 'small',
+                x: Math.random() * (canvas.width - 40) + 20,
+                y: 20,
+                hp: 1,
+                speed: 0.7
+            });
+        }
+
+        function spawnBigEnemy() {
+            enemies.push({
+                type: 'big',
+                x: Math.random() * (canvas.width - 120) + 60,
+                y: Math.random() * 150 + 80,
+                hp: 2,
+                speed: 0,
+                lastShot: 0
+            });
+        }
+
+        function spawnRollingEnemy() {
+            const side = Math.random() < 0.5 ? 'left' : 'right';
+            const x = side === 'left' ? -30 : canvas.width + 30;
+            const direction = side === 'left' ? 1 : -1;
+            
+            enemies.push({
+                type: 'rolling',
+                x: x,
+                y: canvas.height - 100,
+                hp: 3,
+                speed: 1.2,
+                direction: direction
+            });
+        }
+
+        function shootEnemyBullet(enemy) {
+            if (!window.enemyBullets) window.enemyBullets = [];
+            
+            const dx = (player.x + player.width/2) - enemy.x;
+            const dy = (player.y + player.height/2) - enemy.y;
+            const distance = Math.sqrt(dx * dx + dy * dy);
+            
+            window.enemyBullets.push({
+                x: enemy.x,
+                y: enemy.y,
+                dx: dx / distance,
+                dy: dy / distance
+            });
+        }
+
+        function togglePause() {
+            gameState.paused = !gameState.paused;
+            if (gameState.paused) {
+                document.getElementById('pauseMenu').classList.remove('hidden');
+            } else {
+                document.getElementById('pauseMenu').classList.add('hidden');
+            }
+        }
+
+        function quitGame() {
+            gameState.gameRunning = false;
+            showScreen('menu');
+        }
+
+        function gameOver() {
+            gameState.gameRunning = false;
+            alert('Game Over! Você foi derrotado!');
+            showScreen('menu');
+        }
+
+        function winLevel() {
+            gameState.gameRunning = false;
+            
+            if (gameState.currentLevel === 1) {
+                gameState.level1Completed = true;
+                gameState.money += 50;
+                
+                gameState.cutsceneActive = true;
+                document.getElementById('cutsceneOverlay').classList.remove('hidden');
+                document.getElementById('cutsceneContent').textContent = '"Volto já, aproveita seu tempo!" - Blue entra na nave e vai embora.';
+                
+                setTimeout(() => {
+                    gameState.cutsceneActive = false;
+                    document.getElementById('cutsceneOverlay').classList.add('hidden');
+                    alert('Parabéns! Você completou a Fase 1! +50 💰\nFase 2 desbloqueada!');
+                    showScreen('menu');
+                }, 3000);
+            } else if (gameState.currentLevel === 2) {
+                gameState.level2Completed = true;
+                gameState.money += 100;
+                gameState.cutsceneActive = true;
+                document.getElementById('cutsceneOverlay').classList.remove('hidden');
+                
+                let cutsceneCanvas = document.createElement('canvas');
+                cutsceneCanvas.width = 400;
+                cutsceneCanvas.height = 300;
+                cutsceneCanvas.style.border = '2px solid white';
+                cutsceneCanvas.style.borderRadius = '8px';
+                
+                const cutsceneCtx = cutsceneCanvas.getContext('2d');
+                
+                cutsceneCtx.fillStyle = '#87CEEB';
+                cutsceneCtx.fillRect(0, 0, 400, 300);
+                
+                cutsceneCtx.fillStyle = '#808080';
+                cutsceneCtx.fillRect(150, 100, 100, 40);
+                cutsceneCtx.fillRect(175, 80, 50, 20);
+                
+                cutsceneCtx.fillStyle = '#FFB6C1';
+                for (let i = 0; i < 6; i++) {
+                    cutsceneCtx.beginPath();
+                    cutsceneCtx.arc(160 + i * 15, 120, 5, 0, Math.PI * 2);
+                    cutsceneCtx.fill();
+                }
+                
+                cutsceneCtx.fillStyle = '#0066CC';
+                cutsceneCtx.fillRect(185, 90, 30, 30);
+                
+                const contentDiv = document.getElementById('cutsceneContent');
+                contentDiv.innerHTML = '';
+                contentDiv.appendChild(cutsceneCanvas);
+                
+                const textDiv = document.createElement('div');
+                textDiv.textContent = '"Eles vão dar uma visitinha num planeta diferente!" - Blue voa para longe com as bolas capturadas.';
+                textDiv.className = 'text-white pixel-font text-sm text-center mt-4';
+                contentDiv.appendChild(textDiv);
+                
+                setTimeout(() => {
+                    gameState.cutsceneActive = false;
+                    document.getElementById('cutsceneOverlay').classList.add('hidden');
+                    alert('Parabéns! Você completou a Fase 2! +100 💰\nFase 3 desbloqueada!');
+                    showScreen('menu');
+                }, 4000);
+            } else if (gameState.currentLevel === 3) {
+                gameState.level3Completed = true;
+                gameState.money += 200;
+                
+                gameState.cutsceneActive = true;
+                document.getElementById('cutsceneOverlay').classList.remove('hidden');
+                
+                let cutsceneCanvas = document.createElement('canvas');
+                cutsceneCanvas.width = 400;
+                cutsceneCanvas.height = 300;
+                cutsceneCanvas.style.border = '2px solid white';
+                cutsceneCanvas.style.borderRadius = '8px';
+                
+                const cutsceneCtx = cutsceneCanvas.getContext('2d');
+                
+                cutsceneCtx.fillStyle = '#FFB6C1';
+                cutsceneCtx.fillRect(0, 0, 400, 300);
+                
+                cutsceneCtx.fillStyle = '#C0C0C0';
+                cutsceneCtx.fillRect(150, 80, 100, 120);
+                
+                cutsceneCtx.fillStyle = '#32CD32';
+                cutsceneCtx.beginPath();
+                cutsceneCtx.arc(200, 150, 15, 0, Math.PI * 2);
+                cutsceneCtx.fill();
+                
+                cutsceneCtx.fillStyle = '#8A2BE2';
+                cutsceneCtx.globalAlpha = 0.8;
+                cutsceneCtx.beginPath();
+                cutsceneCtx.arc(200, 160, 25, 0, Math.PI * 2);
+                cutsceneCtx.fill();
+                cutsceneCtx.globalAlpha = 1;
+                
+                const contentDiv = document.getElementById('cutsceneContent');
+                contentDiv.innerHTML = '';
+                contentDiv.appendChild(cutsceneCanvas);
+                
+                const textDiv = document.createElement('div');
+                textDiv.textContent = '"Está bem, você pode usar a máquina. Boa sorte!" - A Bola Dona permite o acesso e você parte para o planeta quadrado.';
+                textDiv.className = 'text-white pixel-font text-sm text-center mt-4';
+                contentDiv.appendChild(textDiv);
+                
+                setTimeout(() => {
+                    gameState.cutsceneActive = false;
+                    document.getElementById('cutsceneOverlay').classList.add('hidden');
+                    alert('Parabéns! Você completou a Fase 3! +200 💰\nFase 4 desbloqueada!');
+                    showScreen('menu');
+                }, 4000);
+            } else if (gameState.currentLevel === 4) {
+                gameState.level4Completed = true;
+                gameState.money += 150;
+                
+                gameState.cutsceneActive = true;
+                document.getElementById('cutsceneOverlay').classList.remove('hidden');
+                
+                let cutsceneCanvas = document.createElement('canvas');
+                cutsceneCanvas.width = 400;
+                cutsceneCanvas.height = 300;
+                cutsceneCanvas.style.border = '2px solid white';
+                cutsceneCanvas.style.borderRadius = '8px';
+                
+                const cutsceneCtx = cutsceneCanvas.getContext('2d');
+                
+                cutsceneCtx.fillStyle = '#228B22';
+                cutsceneCtx.fillRect(0, 0, 400, 300);
+                
+                cutsceneCtx.fillStyle = '#8B4513';
+                cutsceneCtx.fillRect(150, 100, 100, 200);
+                cutsceneCtx.fillRect(175, 80, 50, 20);
+                cutsceneCtx.fillRect(190, 60, 20, 20);
+                cutsceneCtx.fillRect(195, 40, 10, 20);
+                
+                cutsceneCtx.fillStyle = '#32CD32';
+                cutsceneCtx.beginPath();
+                cutsceneCtx.arc(200, 250, 15, 0, Math.PI * 2);
+                cutsceneCtx.fill();
+                
+                const contentDiv = document.getElementById('cutsceneContent');
+                contentDiv.innerHTML = '';
+                contentDiv.appendChild(cutsceneCanvas);
+                
+                const textDiv = document.createElement('div');
+                textDiv.textContent = 'O jogador vê um caminho gigantesco que terá que atravessar... "Vai ser uma longa jornada"';
+                textDiv.className = 'text-white pixel-font text-sm text-center mt-4';
+                contentDiv.appendChild(textDiv);
+                
+                setTimeout(() => {
+                    gameState.cutsceneActive = false;
+                    document.getElementById('cutsceneOverlay').classList.add('hidden');
+                    alert('Parabéns! Você completou a Fase 4! +150 💰\nMundo 2 desbloqueado!');
+                    showScreen('menu');
+                }, 4000);
+            }
+            
+            updateMoneyDisplay();
+        }
+
+        // Initialize on page load
+        window.addEventListener('load', () => {
+            setupMobileControls();
+            updateMoneyDisplay();
+            updateAchievementsScreen();
+        });
+    </script>
+</body>
+</html>
